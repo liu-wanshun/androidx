@@ -92,6 +92,10 @@ constructor(context: Context, @StyleRes themeResId: Int = 0) :
         onBackPressedDispatcher.onBackPressed()
     }
 
+    override fun getWindow(): Window {
+        return super.getWindow()!!
+    }
+
     override fun setContentView(layoutResID: Int) {
         initializeViewTreeOwners()
         super.setContentView(layoutResID)
