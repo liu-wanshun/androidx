@@ -12,7 +12,7 @@ package androidx.wear.protolayout.testing {
     method public static androidx.wear.protolayout.testing.LayoutElementMatcher hasHeight(androidx.wear.protolayout.DimensionBuilders.ContainerDimension height);
     method public static androidx.wear.protolayout.testing.LayoutElementMatcher hasHeight(androidx.wear.protolayout.DimensionBuilders.ProportionalDimensionProp height);
     method public static androidx.wear.protolayout.testing.LayoutElementMatcher hasImage(String protolayoutResId);
-    method public static androidx.wear.protolayout.testing.LayoutElementMatcher hasText(androidx.wear.protolayout.TypeBuilders.StringProp value);
+    method public static androidx.wear.protolayout.testing.LayoutElementMatcher hasText(androidx.wear.protolayout.types.LayoutString value);
     method public static androidx.wear.protolayout.testing.LayoutElementMatcher hasText(String value);
     method public static androidx.wear.protolayout.testing.LayoutElementMatcher hasText(String value, optional boolean subString);
     method public static androidx.wear.protolayout.testing.LayoutElementMatcher hasText(String value, optional boolean subString, optional boolean ignoreCase);

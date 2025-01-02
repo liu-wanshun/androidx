@@ -164,7 +164,7 @@ package androidx.appsearch.builtintypes {
     method public android.net.Uri? getIconUri();
     method public String getPackageName();
     method public byte[] getSha256Certificate();
-    method public long getUpdatedTimestamp();
+    method public long getUpdatedTimestampMillis();
   }
 
   public static final class MobileApplication.Builder {
@@ -186,7 +186,7 @@ package androidx.appsearch.builtintypes {
     method @SuppressCompatibility @androidx.appsearch.app.ExperimentalAppSearchApi public androidx.appsearch.builtintypes.MobileApplication.Builder setImage(String?);
     method public androidx.appsearch.builtintypes.MobileApplication.Builder setName(String?);
     method @SuppressCompatibility @androidx.appsearch.app.ExperimentalAppSearchApi public androidx.appsearch.builtintypes.MobileApplication.Builder setPotentialActions(java.util.List<androidx.appsearch.builtintypes.PotentialAction!>?);
-    method public androidx.appsearch.builtintypes.MobileApplication.Builder setUpdatedTimestamp(long);
+    method public androidx.appsearch.builtintypes.MobileApplication.Builder setUpdatedTimestampMillis(long);
     method public androidx.appsearch.builtintypes.MobileApplication.Builder setUrl(String?);
   }
 

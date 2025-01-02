@@ -17,6 +17,7 @@
 package androidx.appsearch.platformstorage.converter;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.os.Build;
 
 import androidx.annotation.RequiresApi;
@@ -39,12 +40,15 @@ public class JoinSpecToPlatformConverter {
      */
     @SuppressLint("WrongConstant")
     public static android.app.appsearch.@NonNull JoinSpec toPlatformJoinSpec(
+            @NonNull Context context,
             @NonNull JoinSpec jetpackSpec) {
+        Preconditions.checkNotNull(context);
         Preconditions.checkNotNull(jetpackSpec);
         return new android.app.appsearch.JoinSpec.Builder(jetpackSpec.getChildPropertyExpression())
                 .setNestedSearch(
                         jetpackSpec.getNestedQuery(),
                         SearchSpecToPlatformConverter.toPlatformSearchSpec(
+                                context,
                                 jetpackSpec.getNestedSearchSpec()))
                 .setMaxJoinedResultCount(jetpackSpec.getMaxJoinedResultCount())
                 .setAggregationScoringStrategy(jetpackSpec.getAggregationScoringStrategy())

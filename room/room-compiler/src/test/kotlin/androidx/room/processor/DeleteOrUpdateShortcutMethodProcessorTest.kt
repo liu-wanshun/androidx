@@ -107,7 +107,7 @@ abstract class DeleteOrUpdateShortcutMethodProcessorTest<out T : DeleteOrUpdateS
             assertThat(param.pojoType?.asTypeName()).isEqualTo(USER_TYPE_NAME.copy(nullable = true))
             assertThat(shortcut.entities.size).isEqualTo(1)
             assertThat(shortcut.entities["user"]?.isPartialEntity).isEqualTo(false)
-            assertThat(shortcut.entities["user"]?.pojo?.typeName).isEqualTo(USER_TYPE_NAME)
+            assertThat(shortcut.entities["user"]?.dataClass?.typeName).isEqualTo(USER_TYPE_NAME)
         }
     }
 
@@ -159,9 +159,9 @@ abstract class DeleteOrUpdateShortcutMethodProcessorTest<out T : DeleteOrUpdateS
                     .isEqualTo(USER_TYPE_NAME.copy(nullable = true))
             }
             assertThat(shortcut.entities.size).isEqualTo(2)
-            assertThat(shortcut.entities["u1"]?.pojo?.typeName).isEqualTo(USER_TYPE_NAME)
+            assertThat(shortcut.entities["u1"]?.dataClass?.typeName).isEqualTo(USER_TYPE_NAME)
 
-            assertThat(shortcut.entities["u1"]?.pojo?.typeName).isEqualTo(USER_TYPE_NAME)
+            assertThat(shortcut.entities["u1"]?.dataClass?.typeName).isEqualTo(USER_TYPE_NAME)
 
             assertThat(shortcut.parameters.map { it.name }).isEqualTo(listOf("u1", "u2"))
         }
@@ -216,7 +216,8 @@ abstract class DeleteOrUpdateShortcutMethodProcessorTest<out T : DeleteOrUpdateS
                     assertThat(param.pojoType?.asTypeName())
                         .isEqualTo(USER_TYPE_NAME.copy(nullable = true))
                     assertThat(shortcut.entities.size).isEqualTo(1)
-                    assertThat(shortcut.entities["users"]?.pojo?.typeName).isEqualTo(USER_TYPE_NAME)
+                    assertThat(shortcut.entities["users"]?.dataClass?.typeName)
+                        .isEqualTo(USER_TYPE_NAME)
                 }
             }
     }
@@ -257,7 +258,7 @@ abstract class DeleteOrUpdateShortcutMethodProcessorTest<out T : DeleteOrUpdateS
                 )
 
             assertThat(shortcut.entities.size).isEqualTo(1)
-            assertThat(shortcut.entities["users"]?.pojo?.typeName).isEqualTo(USER_TYPE_NAME)
+            assertThat(shortcut.entities["users"]?.dataClass?.typeName).isEqualTo(USER_TYPE_NAME)
         }
     }
 
@@ -295,7 +296,7 @@ abstract class DeleteOrUpdateShortcutMethodProcessorTest<out T : DeleteOrUpdateS
                 )
 
             assertThat(shortcut.entities.size).isEqualTo(1)
-            assertThat(shortcut.entities["users"]?.pojo?.typeName).isEqualTo(USER_TYPE_NAME)
+            assertThat(shortcut.entities["users"]?.dataClass?.typeName).isEqualTo(USER_TYPE_NAME)
         }
     }
 
@@ -336,7 +337,7 @@ abstract class DeleteOrUpdateShortcutMethodProcessorTest<out T : DeleteOrUpdateS
                 )
 
             assertThat(shortcut.entities.size).isEqualTo(1)
-            assertThat(shortcut.entities["users"]?.pojo?.typeName).isEqualTo(USER_TYPE_NAME)
+            assertThat(shortcut.entities["users"]?.dataClass?.typeName).isEqualTo(USER_TYPE_NAME)
         }
     }
 
@@ -363,7 +364,7 @@ abstract class DeleteOrUpdateShortcutMethodProcessorTest<out T : DeleteOrUpdateS
                 )
 
             assertThat(shortcut.entities.size).isEqualTo(1)
-            assertThat(shortcut.entities["users"]?.pojo?.typeName).isEqualTo(USER_TYPE_NAME)
+            assertThat(shortcut.entities["users"]?.dataClass?.typeName).isEqualTo(USER_TYPE_NAME)
         }
     }
 
@@ -416,9 +417,11 @@ abstract class DeleteOrUpdateShortcutMethodProcessorTest<out T : DeleteOrUpdateS
 
                     assertThat(shortcut.parameters.map { it.name }).isEqualTo(listOf("u1", "b1"))
                     assertThat(shortcut.entities.size).isEqualTo(2)
-                    assertThat(shortcut.entities["u1"]?.pojo?.typeName).isEqualTo(USER_TYPE_NAME)
+                    assertThat(shortcut.entities["u1"]?.dataClass?.typeName)
+                        .isEqualTo(USER_TYPE_NAME)
 
-                    assertThat(shortcut.entities["b1"]?.pojo?.typeName).isEqualTo(BOOK_TYPE_NAME)
+                    assertThat(shortcut.entities["b1"]?.dataClass?.typeName)
+                        .isEqualTo(BOOK_TYPE_NAME)
                 }
             }
     }
@@ -534,7 +537,8 @@ abstract class DeleteOrUpdateShortcutMethodProcessorTest<out T : DeleteOrUpdateS
             assertThat(shortcut.entities.size).isEqualTo(1)
             assertThat(shortcut.entities["username"]?.isPartialEntity).isEqualTo(true)
             assertThat(shortcut.entities["username"]?.entityTypeName).isEqualTo(USER_TYPE_NAME)
-            assertThat(shortcut.entities["username"]?.pojo?.typeName).isEqualTo(USERNAME_TYPE_NAME)
+            assertThat(shortcut.entities["username"]?.dataClass?.typeName)
+                .isEqualTo(USERNAME_TYPE_NAME)
         }
     }
 

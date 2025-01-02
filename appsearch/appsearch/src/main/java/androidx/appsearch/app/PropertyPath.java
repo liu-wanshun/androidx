@@ -92,9 +92,6 @@ public class PropertyPath implements Iterable<PropertyPath.PathSegment> {
                 controlIsIndex = c == '[';
                 break;
             }
-            if (!Character.isLetterOrDigit(c)) {
-                throw new IllegalArgumentException("Malformed path (non alphanumeric character)");
-            }
         }
 
         if (controlPos == 0 || path.isEmpty()) {

@@ -61,8 +61,8 @@ object DatePickerBenchmark : MacrobenchmarkScreen {
                         datePickerDate = it
                         showDatePicker = false
                     },
-                    minDate = minDate,
-                    maxDate = maxDate,
+                    minValidDate = minDate,
+                    maxValidDate = maxDate,
                     datePickerType = DatePickerType.YearMonthDay
                 )
             } else {

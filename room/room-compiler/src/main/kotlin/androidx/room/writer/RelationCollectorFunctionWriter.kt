@@ -42,7 +42,7 @@ class RelationCollectorFunctionWriter(private val collector: RelationCollector) 
     TypeWriter.SharedFunctionSpec(
         baseName =
             "fetchRelationship${collector.relation.entity.tableName.stripNonJava()}" +
-                "As${collector.relation.pojoTypeName.toString(CodeLanguage.JAVA).stripNonJava()}",
+                "As${collector.relation.dataClassTypeName.toString(CodeLanguage.JAVA).stripNonJava()}",
     ) {
     companion object {
         const val PARAM_MAP_VARIABLE = "_map"
@@ -60,7 +60,7 @@ class RelationCollectorFunctionWriter(private val collector: RelationCollector) 
             "-${collector.mapTypeName}" +
             "-${relation.entity.typeName.toString(CodeLanguage.JAVA)}" +
             "-${relation.entityField.columnName}" +
-            "-${relation.pojoTypeName}" +
+            "-${relation.dataClassTypeName}" +
             "-${relation.createLoadAllSql()}"
     }
 
@@ -170,13 +170,13 @@ class RelationCollectorFunctionWriter(private val collector: RelationCollector) 
                             keyVar
                         )
                         beginControlFlow("if (%L != null)", relationVar)
-                        addLocalVariable(tmpVarName, relation.pojoTypeName)
+                        addLocalVariable(tmpVarName, relation.dataClassTypeName)
                         collector.rowAdapter.convert(tmpVarName, stmtVar, scope)
                         addStatement("%L.add(%L)", relationVar, tmpVarName)
                         endControlFlow()
                     } else {
                         beginControlFlow("if (%N.containsKey(%L))", PARAM_MAP_VARIABLE, keyVar)
-                        addLocalVariable(tmpVarName, relation.pojoTypeName)
+                        addLocalVariable(tmpVarName, relation.dataClassTypeName)
                         collector.rowAdapter.convert(tmpVarName, stmtVar, scope)
                         addStatement("%N.put(%L, %L)", PARAM_MAP_VARIABLE, keyVar, tmpVarName)
                         endControlFlow()

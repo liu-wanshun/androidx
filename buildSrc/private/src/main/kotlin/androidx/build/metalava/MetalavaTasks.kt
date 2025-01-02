@@ -23,6 +23,7 @@ import androidx.build.addToCheckTask
 import androidx.build.checkapi.ApiBaselinesLocation
 import androidx.build.checkapi.ApiLocation
 import androidx.build.checkapi.CompilationInputs
+import androidx.build.checkapi.MultiplatformCompilationInputs
 import androidx.build.checkapi.getRequiredCompatibilityApiLocation
 import androidx.build.uptodatedness.cacheEvenIfNoOutputs
 import androidx.build.version
@@ -62,7 +63,7 @@ internal object MetalavaTasks {
                 task.metalavaClasspath.from(metalavaClasspath)
                 task.generateRestrictToLibraryGroupAPIs = generateRestrictToLibraryGroupAPIs
                 task.baselines.set(baselinesApiLocation)
-                task.targetsJavaConsumers = targetsJavaConsumers
+                task.targetsJavaConsumers.set(targetsJavaConsumers)
                 task.k2UastEnabled.set(extension.metalavaK2UastEnabled)
                 task.kotlinSourceLevel.set(kotlinSourceLevel)
 
@@ -70,8 +71,7 @@ internal object MetalavaTasks {
                 task.projectApiDirectory = project.layout.projectDirectory.dir("api")
                 task.currentVersion.set(version)
 
-                androidManifest?.let { task.manifestPath.set(it) }
-                applyInputs(compilationInputs, task, generateApiDependencies)
+                applyInputs(compilationInputs, task, generateApiDependencies, androidManifest)
                 // If we will be updating the api lint baselines, then we should do that before
                 // using it to validate the generated api
                 task.mustRunAfter("updateApiLintBaseline")
@@ -126,8 +126,7 @@ internal object MetalavaTasks {
                 task.targetsJavaConsumers.set(targetsJavaConsumers)
                 task.k2UastEnabled.set(extension.metalavaK2UastEnabled)
                 task.kotlinSourceLevel.set(kotlinSourceLevel)
-                androidManifest?.let { task.manifestPath.set(it) }
-                applyInputs(compilationInputs, task, generateApiDependencies)
+                applyInputs(compilationInputs, task, generateApiDependencies, androidManifest)
             }
 
         // Policy: All changes to API surfaces for which compatibility is enforced must be
@@ -209,13 +208,18 @@ internal object MetalavaTasks {
 
     private fun applyInputs(
         inputs: CompilationInputs,
-        task: MetalavaTask,
-        generateApiDependencies: Configuration
+        task: SourceMetalavaTask,
+        generateApiDependencies: Configuration,
+        androidManifest: Provider<RegularFile>?,
     ) {
         task.sourcePaths = inputs.sourcePaths
         task.commonModuleSourcePaths = inputs.commonModuleSourcePaths
         task.compiledSources = generateApiDependencies
         task.dependencyClasspath = inputs.dependencyClasspath
         task.bootClasspath = inputs.bootClasspath
+        androidManifest?.let { task.manifestPath.set(it) }
+        if (inputs is MultiplatformCompilationInputs) {
+            task.optionalSourceSets.set(inputs.sourceSets)
+        }
     }
 }

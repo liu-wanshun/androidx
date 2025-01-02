@@ -173,17 +173,17 @@ class RawQueryMethodProcessorTest {
     }
 
     @Test
-    fun pojo() {
-        val pojo = XClassName.get("foo.bar", "MyClass", "MyPojo")
+    fun dataClass() {
+        val dataClass = XClassName.get("foo.bar", "MyClass", "MyDataClass")
         singleQueryMethod(
             """
-                public class MyPojo {
+                public class MyDataClass {
                     public String foo;
                     public String bar;
                 }
 
                 @RawQuery
-                abstract public MyPojo foo(SupportSQLiteQuery query);
+                abstract public MyDataClass foo(SupportSQLiteQuery query);
                 """
         ) { query, _ ->
             assertThat(query.element.name, `is`("foo"))
@@ -196,7 +196,7 @@ class RawQueryMethodProcessorTest {
                     )
                 )
             )
-            assertThat(query.returnType.asTypeName(), `is`(pojo.copy(nullable = true)))
+            assertThat(query.returnType.asTypeName(), `is`(dataClass.copy(nullable = true)))
             assertThat(query.observedTableNames, `is`(emptySet()))
         }
     }
@@ -327,10 +327,10 @@ class RawQueryMethodProcessorTest {
     }
 
     @Test
-    fun observed_relationPojo() {
+    fun observed_relationDataClass() {
         singleQueryMethod(
             """
-                public static class MyPojo {
+                public static class MyDataClass {
                     public String foo;
                     @Relation(
                         parentColumn = "foo",
@@ -338,7 +338,7 @@ class RawQueryMethodProcessorTest {
                     )
                     public java.util.List<User> users;
                 }
-                @RawQuery(observedEntities = MyPojo.class)
+                @RawQuery(observedEntities = MyDataClass.class)
                 abstract public int[] foo(SupportSQLiteQuery query);
                 """
         ) { method, _ ->
@@ -350,12 +350,12 @@ class RawQueryMethodProcessorTest {
     fun observed_embedded() {
         singleQueryMethod(
             """
-                public static class MyPojo {
+                public static class MyDataClass {
                     public String foo;
                     @Embedded
                     public User users;
                 }
-                @RawQuery(observedEntities = MyPojo.class)
+                @RawQuery(observedEntities = MyDataClass.class)
                 abstract public int[] foo(SupportSQLiteQuery query);
                 """
         ) { method, _ ->

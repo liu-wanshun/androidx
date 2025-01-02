@@ -32,10 +32,12 @@ import androidx.pdf.exceptions.PdfPasswordException
 import androidx.pdf.search.SearchRepository
 import androidx.pdf.search.model.NoQuery
 import androidx.pdf.search.model.QueryResults
+import androidx.pdf.search.model.SearchResultState
+import androidx.pdf.viewer.fragment.model.HighlightData
 import androidx.pdf.viewer.fragment.model.PdfFragmentUiState
 import androidx.pdf.viewer.fragment.model.SearchViewUiState
-import androidx.pdf.viewer.fragment.util.countTotalElements
-import androidx.pdf.viewer.fragment.util.getFlattenedIndex
+import androidx.pdf.viewer.fragment.util.fetchCounterData
+import androidx.pdf.viewer.fragment.util.toHighlightsData
 import java.util.concurrent.Executors
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -97,6 +99,12 @@ internal class PdfDocumentViewModel(
     /** Stream of UI states of the PdfSearchView. */
     internal val searchViewUiState: StateFlow<SearchViewUiState>
         get() = _searchViewUiState.asStateFlow()
+
+    private val _highlightsFlow = MutableStateFlow<HighlightData>(EMPTY_HIGHLIGHTS)
+
+    /** Stream of highlights to be added on PdfView. Also includes scroll to page data. */
+    internal val highlightsFlow: StateFlow<HighlightData>
+        get() = _highlightsFlow.asStateFlow()
 
     /**
      * Indicates whether the user is entering their password for the first time or making a repeated
@@ -169,9 +177,12 @@ internal class PdfDocumentViewModel(
                     fragmentUiScreenState.value !is PdfFragmentUiState.DocumentLoaded)
             ) {
                 state[DOCUMENT_URI_KEY] = uri
-
                 // Ensure we don't schedule duplicate loading by canceling previous one.
                 if (documentLoadJob?.isActive == true) documentLoadJob?.cancel()
+
+                // Loading a new document should not persist a search session from previous
+                // document.
+                updateSearchState(isTextSearchActive = false)
 
                 documentLoadJob = viewModelScope.launch { openDocument(uri, password) }
             }
@@ -203,36 +214,49 @@ internal class PdfDocumentViewModel(
             searchRepository.clearSearchResults()
 
             _searchViewUiState.update { SearchViewUiState.Closed }
+            _highlightsFlow.update { EMPTY_HIGHLIGHTS }
         }
     }
 
     private fun collectSearchResults() {
         viewModelScope.launch(searchCollector) {
             searchRepository.queryResults.collect { queryResults ->
-                val searchUiState =
-                    when (queryResults) {
-                        is NoQuery -> SearchViewUiState.Init
-                        is QueryResults.NoMatch ->
-                            SearchViewUiState.Active(currentIndex = 0, totalMatches = 0)
-                        is QueryResults.Matched -> queryResults.toMatchedUiState()
-                    }
-
-                _searchViewUiState.update { searchUiState }
+                handleQueryResults(queryResults)
             }
         }
     }
 
-    private fun QueryResults.toMatchedUiState(): SearchViewUiState =
-        with(this as QueryResults.Matched) {
-            SearchViewUiState.Active(
-                currentIndex =
-                    resultBounds.getFlattenedIndex(
-                        queryResultsIndex.pageNum,
-                        queryResultsIndex.resultBoundsIndex
-                    ),
-                totalMatches = resultBounds.countTotalElements()
-            )
+    private fun handleQueryResults(queryResults: SearchResultState) {
+        when (queryResults) {
+            is NoQuery -> {
+                _searchViewUiState.update { SearchViewUiState.Init }
+                _highlightsFlow.update { EMPTY_HIGHLIGHTS }
+            }
+            is QueryResults.NoMatch -> {
+                _searchViewUiState.update {
+                    SearchViewUiState.Active(currentMatch = 0, totalMatches = 0)
+                }
+                _highlightsFlow.update { EMPTY_HIGHLIGHTS }
+            }
+            is QueryResults.Matched -> {
+                val (currentIndex, totalMatches) = queryResults.fetchCounterData()
+                _searchViewUiState.update {
+                    SearchViewUiState.Active(
+                        // The UI displays the search result counter starting from 1,
+                        // so we add 1 to the current index.
+                        currentMatch = if (totalMatches > 0) currentIndex + 1 else 0,
+                        totalMatches = totalMatches
+                    )
+                }
+                _highlightsFlow.update {
+                    HighlightData(
+                        currentIndex = currentIndex,
+                        highlightBounds = queryResults.toHighlightsData()
+                    )
+                }
+            }
         }
+    }
 
     /**
      * Handles user interaction related to enabling the toolbox view.
@@ -284,6 +308,11 @@ internal class PdfDocumentViewModel(
          */
         if (!isTextSearchActiveFromState) return
 
+        val queryResults = searchRepository.queryResults.value
+        // Return early if the query is unchanged from the previous search to avoid redundant
+        // operations.
+        if (queryResults is QueryResults && queryResults.query == query) return
+
         // Cancel any on-going search operation(s) as the results will not be valid anymore.
         searchJob.children.forEach { it.cancel() }
 
@@ -316,6 +345,7 @@ internal class PdfDocumentViewModel(
         private const val DOCUMENT_URI_KEY = "documentUri"
         private const val TEXT_SEARCH_STATE_KEY = "textSearchState"
         private const val TOOLBOX_STATE_KEY = "toolboxState"
+        private val EMPTY_HIGHLIGHTS = HighlightData(currentIndex = -1, highlightBounds = listOf())
 
         val Factory: ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {

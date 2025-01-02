@@ -321,6 +321,9 @@ public final class SetSchemaRequest {
      *         {@link SetSchemaRequest#READ_ASSISTANT_APP_SEARCH_DATA}.
      */
     // TODO(b/237388235): add enterprise permissions to javadocs after they're unhidden
+    // Annotation is here to suppress lint error. Lint error is erroneous since the method does not
+    // require the caller to hold any permission for the method to function.
+    @SuppressLint("RequiresPermission")
     public @NonNull Map<String, Set<Set<Integer>>> getRequiredPermissionsForSchemaTypeVisibility() {
         return deepCopy(mSchemasVisibleToPermissions);
     }
@@ -598,8 +601,10 @@ public final class SetSchemaRequest {
          */
         // TODO(b/237388235): add enterprise permissions to javadocs after they're unhidden
         // Merged list available from getRequiredPermissionsForSchemaTypeVisibility
+        // Annotation is here to suppress lint error. Lint error is erroneous since the method does
+        // not require the caller to hold any permission for the method to function.
         @CanIgnoreReturnValue
-        @SuppressLint("MissingGetterMatchingBuilder")
+        @SuppressLint({"MissingGetterMatchingBuilder", "RequiresPermission"})
         @RequiresFeature(
                 enforcement = "androidx.appsearch.app.Features#isFeatureSupported",
                 name = Features.ADD_PERMISSIONS_AND_GET_VISIBILITY)

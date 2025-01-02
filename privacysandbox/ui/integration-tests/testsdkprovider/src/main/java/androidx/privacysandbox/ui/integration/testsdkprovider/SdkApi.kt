@@ -24,7 +24,7 @@ import android.os.Process
 import androidx.privacysandbox.sdkruntime.core.controller.SdkSandboxControllerCompat
 import androidx.privacysandbox.ui.core.DelegatingSandboxedUiAdapter
 import androidx.privacysandbox.ui.core.ExperimentalFeatures
-import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import androidx.privacysandbox.ui.integration.mediateesdkprovider.IMediateeSdkApiFactory
 import androidx.privacysandbox.ui.integration.sdkproviderutils.PlayerViewProvider
 import androidx.privacysandbox.ui.integration.sdkproviderutils.PlayerViewabilityHandler
 import androidx.privacysandbox.ui.integration.sdkproviderutils.SdkApiConstants.Companion.AdType
@@ -58,25 +58,22 @@ class SdkApi(private val sdkContext: Context) : ISdkApi {
                 testAdapters.OverlaidAd(mediateeBundle).toCoreLibInfo(sdkContext)
             } else mediateeBundle
         }
-        // TODO(b/384019227): Clean up to avoid casting.
-        val adapter: SandboxedUiAdapter =
-            (when (adType) {
-                    AdType.BASIC_NON_WEBVIEW -> {
-                        loadNonWebViewBannerAd("Simple Ad", waitInsideOnDraw)
-                    }
-                    AdType.BASIC_WEBVIEW -> {
-                        loadWebViewBannerAd()
-                    }
-                    AdType.WEBVIEW_FROM_LOCAL_ASSETS -> {
-                        loadWebViewBannerAdFromLocalAssets()
-                    }
-                    AdType.NON_WEBVIEW_VIDEO -> loadVideoAd()
-                    else -> {
-                        loadNonWebViewBannerAd("Ad type not present", waitInsideOnDraw)
-                    }
+        val adapter: AbstractSandboxedUiAdapter =
+            when (adType) {
+                AdType.BASIC_NON_WEBVIEW -> {
+                    loadNonWebViewBannerAd("Simple Ad", waitInsideOnDraw)
                 }
-                    as AbstractSandboxedUiAdapter)
-                .also { ViewabilityHandler.addObserverFactoryToAdapter(it, drawViewability) }
+                AdType.BASIC_WEBVIEW -> {
+                    loadWebViewBannerAd()
+                }
+                AdType.WEBVIEW_FROM_LOCAL_ASSETS -> {
+                    loadWebViewBannerAdFromLocalAssets()
+                }
+                AdType.NON_WEBVIEW_VIDEO -> loadVideoAd()
+                else -> {
+                    loadNonWebViewBannerAd("Ad type not present", waitInsideOnDraw)
+                }
+            }.also { ViewabilityHandler.addObserverFactoryToAdapter(it, drawViewability) }
         return adapter.toCoreLibInfo(sdkContext)
     }
 
@@ -162,22 +159,22 @@ class SdkApi(private val sdkContext: Context) : ISdkApi {
         Process.killProcess(Process.myPid())
     }
 
-    private fun loadWebViewBannerAd(): SandboxedUiAdapter {
+    private fun loadWebViewBannerAd(): AbstractSandboxedUiAdapter {
         return testAdapters.WebViewBannerAd()
     }
 
-    private fun loadWebViewBannerAdFromLocalAssets(): SandboxedUiAdapter {
+    private fun loadWebViewBannerAdFromLocalAssets(): AbstractSandboxedUiAdapter {
         return testAdapters.WebViewAdFromLocalAssets()
     }
 
     private fun loadNonWebViewBannerAd(
         text: String,
         waitInsideOnDraw: Boolean
-    ): SandboxedUiAdapter {
+    ): AbstractSandboxedUiAdapter {
         return testAdapters.TestBannerAd(text, waitInsideOnDraw)
     }
 
-    private fun loadVideoAd(): SandboxedUiAdapter {
+    private fun loadVideoAd(): AbstractSandboxedUiAdapter {
         val playerViewProvider = PlayerViewProvider()
         val adapter = testAdapters.VideoBannerAd(playerViewProvider)
         PlayerViewabilityHandler.addObserverFactoryToAdapter(adapter, playerViewProvider)
@@ -185,7 +182,7 @@ class SdkApi(private val sdkContext: Context) : ISdkApi {
     }
 
     @OptIn(ExperimentalFeatures.DelegatingAdapterApi::class)
-    private fun loadMediatedTestAd(
+    private suspend fun loadMediatedTestAd(
         @MediationOption mediationOption: Int,
         @AdType adType: Int,
         waitInsideOnDraw: Boolean,
@@ -209,7 +206,7 @@ class SdkApi(private val sdkContext: Context) : ISdkApi {
 
     override fun requestResize(width: Int, height: Int) {}
 
-    private fun maybeGetMediateeBannerAdBundle(
+    private suspend fun maybeGetMediateeBannerAdBundle(
         mediationOption: Int,
         adType: Int,
         withSlowDraw: Boolean,
@@ -238,7 +235,11 @@ class SdkApi(private val sdkContext: Context) : ISdkApi {
             sandboxedSdks.forEach { sandboxedSdkCompat ->
                 if (sandboxedSdkCompat.getSdkInfo()?.name == MEDIATEE_SDK) {
                     val mediateeSdkApi =
-                        IMediateeSdkApi.Stub.asInterface(sandboxedSdkCompat.getInterface())
+                        IMediateeSdkApiFactory.wrapToIMediateeSdkApi(
+                            checkNotNull(sandboxedSdkCompat.getInterface()) {
+                                "Cannot find Mediatee Sdk Service!"
+                            }
+                        )
                     return mediateeSdkApi.loadBannerAd(adType, withSlowDraw, drawViewability)
                 }
             }

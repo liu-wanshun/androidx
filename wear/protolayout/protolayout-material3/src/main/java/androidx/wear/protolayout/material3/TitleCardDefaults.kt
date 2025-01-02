@@ -33,7 +33,7 @@ public object TitleCardDefaults {
     /**
      * Returns [LayoutElement] describing the inner content for the title card.
      *
-     * This is a Column containing the following:
+     * This is a [Column] containing the following:
      * * header slot
      *     * title
      *     * spacing if time is present
@@ -93,7 +93,29 @@ internal constructor(
 ) {
     public companion object {
         /** The default spacer width or height that should be between different elements. */
+        @Dimension(unit = DP) private const val SMALL_SPACE_DP: Int = 2
+        /** The default spacer width or height that should be between different elements. */
         @Dimension(unit = DP) private const val DEFAULT_SPACE_DP: Int = 4
+
+        /**
+         * Default style variation for the [titleCard] where all opinionated inner content is
+         * displayed in a small size.
+         */
+        public fun smallTitleCardStyle(): TitleCardStyle =
+            TitleCardStyle(
+                innerPadding =
+                    Padding.Builder()
+                        .setTop(4.toDp())
+                        .setBottom(4.toDp())
+                        .setStart(14.toDp())
+                        .setEnd(14.toDp())
+                        .build(),
+                titleToTimeSpaceDp = DEFAULT_SPACE_DP,
+                titleToContentSpaceDp = SMALL_SPACE_DP,
+                titleTypography = Typography.LABEL_SMALL,
+                contentTypography = Typography.BODY_SMALL,
+                timeTypography = Typography.BODY_SMALL,
+            )
 
         /**
          * Default style variation for the [titleCard] where all opinionated inner content is
@@ -109,7 +131,7 @@ internal constructor(
                         .setEnd(14.toDp())
                         .build(),
                 titleToTimeSpaceDp = DEFAULT_SPACE_DP,
-                titleToContentSpaceDp = DEFAULT_SPACE_DP,
+                titleToContentSpaceDp = SMALL_SPACE_DP,
                 titleTypography = Typography.LABEL_MEDIUM,
                 contentTypography = Typography.LABEL_SMALL,
                 timeTypography = Typography.BODY_MEDIUM,
@@ -129,7 +151,7 @@ internal constructor(
                         .setEnd(14.toDp())
                         .build(),
                 titleToTimeSpaceDp = DEFAULT_SPACE_DP,
-                titleToContentSpaceDp = DEFAULT_SPACE_DP,
+                titleToContentSpaceDp = SMALL_SPACE_DP,
                 titleTypography = Typography.TITLE_MEDIUM,
                 contentTypography = Typography.LABEL_SMALL,
                 timeTypography = Typography.BODY_MEDIUM,
@@ -149,7 +171,7 @@ internal constructor(
                         .setEnd(14.toDp())
                         .build(),
                 titleToTimeSpaceDp = DEFAULT_SPACE_DP,
-                titleToContentSpaceDp = DEFAULT_SPACE_DP,
+                titleToContentSpaceDp = SMALL_SPACE_DP,
                 titleTypography = Typography.LABEL_LARGE,
                 contentTypography = Typography.LABEL_SMALL,
                 timeTypography = Typography.BODY_MEDIUM,

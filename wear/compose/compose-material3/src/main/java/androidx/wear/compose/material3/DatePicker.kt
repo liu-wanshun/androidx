@@ -73,7 +73,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
- * Full screen date picker with day, month, year.
+ * Full screen [DatePicker] with day, month, year.
  *
  * This component is designed to take most/all of the screen and utilizes large fonts.
  *
@@ -92,9 +92,9 @@ import java.time.format.DateTimeFormatter
  * @param onDatePicked The callback that is called when the user confirms the date selection. It
  *   provides the selected date as [LocalDate]
  * @param modifier Modifier to be applied to the `Box` containing the UI elements.
- * @param minDate Optional minimum date that can be selected in the DatePicker (inclusive).
- * @param maxDate Optional maximum date that can be selected in the DatePicker (inclusive).
- * @param datePickerType The different [DatePickerType] supported by this date picker.
+ * @param minValidDate Optional minimum date that can be selected in the DatePicker (inclusive).
+ * @param maxValidDate Optional maximum date that can be selected in the DatePicker (inclusive).
+ * @param datePickerType The different [DatePickerType] supported by this [DatePicker].
  * @param colors [DatePickerColors] to be applied to the DatePicker.
  */
 @RequiresApi(Build.VERSION_CODES.O)
@@ -103,19 +103,20 @@ public fun DatePicker(
     initialDate: LocalDate,
     onDatePicked: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
-    minDate: LocalDate? = null,
-    maxDate: LocalDate? = null,
+    minValidDate: LocalDate? = null,
+    maxValidDate: LocalDate? = null,
     datePickerType: DatePickerType = DatePickerDefaults.datePickerType,
     colors: DatePickerColors = DatePickerDefaults.datePickerColors()
 ) {
     val inspectionMode = LocalInspectionMode.current
     val fullyDrawn = remember { Animatable(if (inspectionMode) 1f else 0f) }
 
-    if (minDate != null && maxDate != null) {
-        verifyDates(initialDate, minDate, maxDate)
+    if (minValidDate != null && maxValidDate != null) {
+        verifyDates(initialDate, minValidDate, maxValidDate)
     }
 
-    val datePickerState = remember(initialDate) { DatePickerState(initialDate, minDate, maxDate) }
+    val datePickerState =
+        remember(initialDate) { DatePickerState(initialDate, minValidDate, maxValidDate) }
 
     val touchExplorationServicesEnabled by
         LocalTouchExplorationStateProvider.current.touchExplorationState()
@@ -344,9 +345,9 @@ public fun DatePicker(
                                                 },
                                                 optionHeight = optionHeight,
                                                 selectedContentColor =
-                                                    colors.selectedPickerContentColor,
+                                                    colors.activePickerContentColor,
                                                 unselectedContentColor =
-                                                    colors.unselectedPickerContentColor,
+                                                    colors.inactivePickerContentColor,
                                                 invalidContentColor =
                                                     colors.invalidPickerContentColor,
                                                 isValid = {
@@ -372,9 +373,9 @@ public fun DatePicker(
                                                 },
                                                 optionHeight = optionHeight,
                                                 selectedContentColor =
-                                                    colors.selectedPickerContentColor,
+                                                    colors.activePickerContentColor,
                                                 unselectedContentColor =
-                                                    colors.unselectedPickerContentColor,
+                                                    colors.inactivePickerContentColor,
                                                 invalidContentColor =
                                                     colors.invalidPickerContentColor,
                                                 isValid = {
@@ -399,9 +400,9 @@ public fun DatePicker(
                                                 },
                                                 optionHeight = optionHeight,
                                                 selectedContentColor =
-                                                    colors.selectedPickerContentColor,
+                                                    colors.activePickerContentColor,
                                                 unselectedContentColor =
-                                                    colors.unselectedPickerContentColor,
+                                                    colors.inactivePickerContentColor,
                                                 invalidContentColor =
                                                     colors.invalidPickerContentColor,
                                                 isValid = {
@@ -528,8 +529,8 @@ public object DatePickerDefaults {
     /**
      * Creates a [DatePickerColors] for a [DatePicker].
      *
-     * @param selectedPickerContentColor The content color of selected picker.
-     * @param unselectedPickerContentColor The content color of unselected picker.
+     * @param activePickerContentColor The content color of the currently active picker section.
+     * @param inactivePickerContentColor The content color of an inactive picker section.
      * @param invalidPickerContentColor The content color of invalid picker options. Picker options
      *   can be invalid when minDate or maxDate are specified for the [DatePicker].
      * @param pickerLabelColor The color of the picker label.
@@ -540,8 +541,8 @@ public object DatePickerDefaults {
      */
     @Composable
     public fun datePickerColors(
-        selectedPickerContentColor: Color = Color.Unspecified,
-        unselectedPickerContentColor: Color = Color.Unspecified,
+        activePickerContentColor: Color = Color.Unspecified,
+        inactivePickerContentColor: Color = Color.Unspecified,
         invalidPickerContentColor: Color = Color.Unspecified,
         pickerLabelColor: Color = Color.Unspecified,
         nextButtonContentColor: Color = Color.Unspecified,
@@ -550,8 +551,8 @@ public object DatePickerDefaults {
         confirmButtonContainerColor: Color = Color.Unspecified,
     ): DatePickerColors =
         MaterialTheme.colorScheme.defaultDatePickerColors.copy(
-            selectedPickerContentColor = selectedPickerContentColor,
-            unselectedPickerContentColor = unselectedPickerContentColor,
+            activePickerContentColor = activePickerContentColor,
+            inactivePickerContentColor = inactivePickerContentColor,
             invalidPickerContentColor = invalidPickerContentColor,
             pickerLabelColor = pickerLabelColor,
             nextButtonContentColor = nextButtonContentColor,
@@ -564,9 +565,8 @@ public object DatePickerDefaults {
         get() {
             return defaultDatePickerColorsCached
                 ?: DatePickerColors(
-                        selectedPickerContentColor =
-                            fromToken(DatePickerTokens.SelectedContentColor),
-                        unselectedPickerContentColor =
+                        activePickerContentColor = fromToken(DatePickerTokens.SelectedContentColor),
+                        inactivePickerContentColor =
                             fromToken(DatePickerTokens.UnselectedContentColor),
                         invalidPickerContentColor =
                             fromToken(DatePickerTokens.InvalidContentColor)
@@ -586,10 +586,24 @@ public object DatePickerDefaults {
         }
 }
 
+/**
+ * Colors for [DatePicker].
+ *
+ * @param activePickerContentColor The content color of the currently active picker section, that
+ *   is, the section currently being changed, such as the day, month or year.
+ * @param inactivePickerContentColor The content color of an inactive picker section.
+ * @param invalidPickerContentColor The content color of invalid picker options. Picker options can
+ *   be invalid when minDate or maxDate are specified for the [DatePicker].
+ * @param pickerLabelColor The color of the picker label.
+ * @param nextButtonContentColor The content color of the next button.
+ * @param nextButtonContainerColor The container color of the next button.
+ * @param confirmButtonContentColor The content color of the confirm button.
+ * @param confirmButtonContainerColor The container color of the confirm button.
+ */
 @Immutable
 public class DatePickerColors(
-    public val selectedPickerContentColor: Color,
-    public val unselectedPickerContentColor: Color,
+    public val activePickerContentColor: Color,
+    public val inactivePickerContentColor: Color,
     public val invalidPickerContentColor: Color,
     public val pickerLabelColor: Color,
     public val nextButtonContentColor: Color,
@@ -600,8 +614,9 @@ public class DatePickerColors(
     /**
      * Returns a copy of this DatePickerColors, optionally overriding some of the values.
      *
-     * @param selectedPickerContentColor The content color of selected picker.
-     * @param unselectedPickerContentColor The content color of unselected picker.
+     * @param activePickerContentColor The content color of the currently active picker section,
+     *   that is, the section currently being changed, such as the day, month or year.
+     * @param inactivePickerContentColor The content color of an inactive picker section.
      * @param invalidPickerContentColor The content color of invalid picker options.
      * @param pickerLabelColor The color of the picker label.
      * @param nextButtonContentColor The content color of the next button.
@@ -610,8 +625,8 @@ public class DatePickerColors(
      * @param confirmButtonContainerColor The container color of the confirm button.
      */
     public fun copy(
-        selectedPickerContentColor: Color = this.selectedPickerContentColor,
-        unselectedPickerContentColor: Color = this.unselectedPickerContentColor,
+        activePickerContentColor: Color = this.activePickerContentColor,
+        inactivePickerContentColor: Color = this.inactivePickerContentColor,
         invalidPickerContentColor: Color = this.invalidPickerContentColor,
         pickerLabelColor: Color = this.pickerLabelColor,
         nextButtonContentColor: Color = this.nextButtonContentColor,
@@ -620,10 +635,10 @@ public class DatePickerColors(
         confirmButtonContainerColor: Color = this.confirmButtonContainerColor,
     ): DatePickerColors =
         DatePickerColors(
-            selectedPickerContentColor =
-                selectedPickerContentColor.takeOrElse { this.selectedPickerContentColor },
-            unselectedPickerContentColor =
-                unselectedPickerContentColor.takeOrElse { this.unselectedPickerContentColor },
+            activePickerContentColor =
+                activePickerContentColor.takeOrElse { this.activePickerContentColor },
+            inactivePickerContentColor =
+                inactivePickerContentColor.takeOrElse { this.inactivePickerContentColor },
             invalidPickerContentColor =
                 invalidPickerContentColor.takeOrElse { this.invalidPickerContentColor },
             pickerLabelColor = pickerLabelColor.takeOrElse { this.pickerLabelColor },
@@ -641,8 +656,8 @@ public class DatePickerColors(
         if (this === other) return true
         if (other == null || other !is DatePickerColors) return false
 
-        if (selectedPickerContentColor != other.selectedPickerContentColor) return false
-        if (unselectedPickerContentColor != other.unselectedPickerContentColor) return false
+        if (activePickerContentColor != other.activePickerContentColor) return false
+        if (inactivePickerContentColor != other.inactivePickerContentColor) return false
         if (invalidPickerContentColor != other.invalidPickerContentColor) return false
         if (pickerLabelColor != other.pickerLabelColor) return false
         if (nextButtonContentColor != other.nextButtonContentColor) return false
@@ -654,8 +669,8 @@ public class DatePickerColors(
     }
 
     override fun hashCode(): Int {
-        var result = selectedPickerContentColor.hashCode()
-        result = 31 * result + unselectedPickerContentColor.hashCode()
+        var result = activePickerContentColor.hashCode()
+        result = 31 * result + inactivePickerContentColor.hashCode()
         result = 31 * result + invalidPickerContentColor.hashCode()
         result = 31 * result + pickerLabelColor.hashCode()
         result = 31 * result + nextButtonContentColor.hashCode()

@@ -35,14 +35,14 @@ private constructor(val tableName: String, val pojoTypeName: XTypeName, val fiel
             val fieldsToUse =
                 if (entity.isPartialEntity) {
                     // When using partial entity, delete by values in pojo
-                    entity.pojo.fields
+                    entity.dataClass.fields
                 } else {
                     // When using entity, delete by primary key
                     entity.primaryKey.fields
                 }
             return EntityDeleteAdapterWriter(
                 tableName = entity.tableName,
-                pojoTypeName = entity.pojo.typeName,
+                pojoTypeName = entity.dataClass.typeName,
                 fields = fieldsToUse
             )
         }

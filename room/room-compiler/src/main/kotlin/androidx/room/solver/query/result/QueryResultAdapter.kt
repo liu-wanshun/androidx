@@ -29,5 +29,5 @@ abstract class QueryResultAdapter(val rowAdapters: List<RowAdapter>) {
     // Gets a list of additionally accessed table names in sub queries done by the adapter
     // (e.g. does done to satisfy @Relation fields).
     fun accessedTableNames(): List<String> =
-        rowAdapters.filterIsInstance<PojoRowAdapter>().flatMap { it.relationTableNames() }
+        rowAdapters.filterIsInstance<DataClassRowAdapter>().flatMap { it.relationTableNames() }
 }

@@ -106,7 +106,7 @@ fun DatePickerPastOnlyDemo() {
                 showDatePicker = false
             },
             datePickerType = DatePickerType.YearMonthDay,
-            maxDate = currentDate
+            maxValidDate = currentDate
         )
     } else {
         Box(

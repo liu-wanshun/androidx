@@ -25,15 +25,15 @@ import androidx.room.ext.CommonTypeNames
 import androidx.room.ext.RoomTypeNames
 import androidx.room.ext.SQLiteDriverTypeNames
 import androidx.room.solver.CodeGenScope
+import androidx.room.vo.DataClass
 import androidx.room.vo.FieldWithIndex
-import androidx.room.vo.Pojo
 import androidx.room.vo.ShortcutEntity
 import androidx.room.vo.columnNames
 
 class EntityInsertAdapterWriter
 private constructor(
     val tableName: String,
-    val pojo: Pojo,
+    val dataClass: DataClass,
     val primitiveAutoGenerateColumn: String?,
     val onConflict: String
 ) {
@@ -57,7 +57,7 @@ private constructor(
                 }
             return EntityInsertAdapterWriter(
                 tableName = entity.tableName,
-                pojo = entity.pojo,
+                dataClass = entity.dataClass,
                 primitiveAutoGenerateColumn = primitiveAutoGenerateField?.columnName,
                 onConflict = onConflict
             )
@@ -69,7 +69,7 @@ private constructor(
     ): XTypeSpec {
         return XTypeSpec.anonymousClassBuilder()
             .apply {
-                superclass(RoomTypeNames.INSERT_ADAPTER.parametrizedBy(pojo.typeName))
+                superclass(RoomTypeNames.INSERT_ADAPTER.parametrizedBy(dataClass.typeName))
                 addFunction(
                     XFunSpec.builder(
                             name = "createQuery",
@@ -84,10 +84,10 @@ private constructor(
                                 } else {
                                     append("INSERT INTO `$tableName`")
                                 }
-                                append(" (${pojo.columnNames.joinToString(",") { "`$it`" }})")
+                                append(" (${dataClass.columnNames.joinToString(",") { "`$it`" }})")
                                 append(" VALUES (")
                                 append(
-                                    pojo.fields.joinToString(",") {
+                                    dataClass.fields.joinToString(",") {
                                         if (it.columnName == primitiveAutoGenerateColumn) {
                                             "nullif(?, 0)"
                                         } else {
@@ -112,8 +112,8 @@ private constructor(
                             val stmtParam = "statement"
                             addParameter(stmtParam, SQLiteDriverTypeNames.STATEMENT)
                             val entityParam = "entity"
-                            addParameter(entityParam, pojo.typeName)
-                            val mapped = FieldWithIndex.byOrder(pojo.fields)
+                            addParameter(entityParam, dataClass.typeName)
+                            val mapped = FieldWithIndex.byOrder(dataClass.fields)
                             val bindScope = CodeGenScope(writer = typeWriter)
                             FieldReadWriteWriter.bindToStatement(
                                 ownerVar = entityParam,

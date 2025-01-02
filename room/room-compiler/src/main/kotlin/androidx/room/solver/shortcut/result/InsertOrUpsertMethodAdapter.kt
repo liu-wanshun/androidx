@@ -18,7 +18,6 @@ package androidx.room.solver.shortcut.result
 
 import androidx.room.compiler.codegen.CodeLanguage
 import androidx.room.compiler.codegen.XCodeBlock
-import androidx.room.compiler.codegen.XCodeBlock.Builder.Companion.applyTo
 import androidx.room.compiler.codegen.XPropertySpec
 import androidx.room.compiler.codegen.XTypeName
 import androidx.room.compiler.processing.XType
@@ -260,74 +259,6 @@ class InsertOrUpsertMethodAdapter private constructor(private val methodInfo: Me
             if (scope.language == CodeLanguage.KOTLIN && resultVar != null) {
                 addStatement("%L", resultVar)
             }
-        }
-    }
-
-    fun generateMethodBodyCompat(
-        parameters: List<ShortcutQueryParameter>,
-        adapters: Map<String, Pair<XPropertySpec, Any>>,
-        dbProperty: XPropertySpec,
-        scope: CodeGenScope
-    ) {
-        scope.builder.applyTo { language ->
-            val methodName = methodInfo.methodName
-            val methodReturnInfo = methodInfo.returnInfo
-
-            // TODO assert thread
-            // TODO collect results
-            addStatement("%N.beginTransaction()", dbProperty)
-            val resultVar =
-                when (methodReturnInfo) {
-                    ReturnInfo.VOID,
-                    ReturnInfo.VOID_OBJECT,
-                    ReturnInfo.UNIT -> null
-                    else -> scope.getTmpVar("_result")
-                }
-
-            beginControlFlow("try").apply {
-                parameters.forEach { param ->
-                    val upsertAdapter = adapters.getValue(param.name).first
-                    // We want to keep the e.g. Array<out Long> generic type function signature, so
-                    // need to do a cast.
-                    val resultFormat =
-                        XCodeBlock.of("%L.%L(%L)", upsertAdapter.name, methodName, param.name).let {
-                            if (
-                                language == CodeLanguage.KOTLIN &&
-                                    methodReturnInfo == ReturnInfo.ID_ARRAY_BOX &&
-                                    methodInfo.returnType.asTypeName() == methodReturnInfo.typeName
-                            ) {
-                                XCodeBlock.ofCast(
-                                    typeName = methodReturnInfo.typeName,
-                                    expressionBlock = it
-                                )
-                            } else {
-                                it
-                            }
-                        }
-
-                    if (resultVar != null) {
-                        // if it has more than 1 parameter, we would've already printed the error
-                        // so we don't care about re-declaring the variable here
-                        addLocalVariable(
-                            name = resultVar,
-                            typeName = returnType.asTypeName(),
-                            assignExpr = resultFormat
-                        )
-                    } else {
-                        addStatement("%L", resultFormat)
-                    }
-                }
-                addStatement("%N.setTransactionSuccessful()", dbProperty)
-                if (resultVar != null) {
-                    addStatement("return %L", resultVar)
-                } else if (methodReturnInfo == ReturnInfo.VOID_OBJECT) {
-                    addStatement("return null")
-                } else if (methodReturnInfo == ReturnInfo.UNIT && language == CodeLanguage.JAVA) {
-                    addStatement("return %T.INSTANCE", KotlinTypeNames.UNIT)
-                }
-            }
-            nextControlFlow("finally").apply { addStatement("%N.endTransaction()", dbProperty) }
-            endControlFlow()
         }
     }
 

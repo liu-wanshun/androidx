@@ -58,11 +58,11 @@ internal class PdfSearchViewManager(private val pdfSearchView: PdfSearchView) {
     private fun updateViewAfterSearch(results: SearchViewUiState.Active) {
         pdfSearchView.apply {
             matchStatusTextView.text =
-                prepareMatchStatusText(results.currentIndex, results.totalMatches)
+                prepareMatchStatusText(results.currentMatch, results.totalMatches)
             matchStatusTextView.contentDescription =
                 context.getString(
                     androidx.pdf.R.string.match_status_description,
-                    results.currentIndex,
+                    results.currentMatch,
                     results.totalMatches
                 )
 

@@ -63,9 +63,11 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.testing.impl.CameraPipeConfigTestRule
 import androidx.camera.testing.impl.CameraUtil
 import androidx.camera.testing.impl.CameraUtil.PreTestCameraIdList
+import androidx.camera.testing.impl.ExtensionsUtil
 import androidx.camera.testing.impl.SurfaceTextureProvider
 import androidx.camera.testing.impl.WakelockEmptyActivityRule
 import androidx.camera.testing.impl.fakes.FakeLifecycleOwner
+import androidx.camera.testing.impl.fakes.FakeSessionProcessor
 import androidx.camera.video.Recorder
 import androidx.camera.video.VideoCapture
 import androidx.concurrent.futures.await
@@ -87,11 +89,13 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.abs
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.After
+import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Rule
@@ -474,6 +478,9 @@ class PreviewTest(private val implName: String, private val cameraConfig: Camera
             // unbind the use case to cancel the surface request.
             cameraProvider.unbind(preview)
         }
+
+        // Small delay to allow the SurfaceRequest to be cancelled.
+        delay(500)
 
         val surfaceRequest = surfaceRequestDeferred.await()
         instrumentation.runOnMainSync {
@@ -1436,6 +1443,61 @@ class PreviewTest(private val implName: String, private val cameraConfig: Camera
                 expectedMode = CaptureResult.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION
             )
         }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 23)
+    fun getPreviewCapabilitiesStabilizationSupportIsCorrect_whenNotSupportedInExtensions() {
+        assumeTrue(isPreviewStabilizationModeSupported(CameraSelector.DEFAULT_BACK_CAMERA))
+        val sessionProcessor =
+            FakeSessionProcessor(
+                extensionSpecificChars =
+                    listOf(
+                        android.util.Pair(
+                            CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES,
+                            intArrayOf(CameraCharacteristics.CONTROL_VIDEO_STABILIZATION_MODE_OFF)
+                        )
+                    )
+            )
+        val cameraSelector =
+            ExtensionsUtil.getCameraSelectorWithSessionProcessor(
+                cameraProvider,
+                CameraSelector.DEFAULT_BACK_CAMERA,
+                sessionProcessor
+            )
+        val capabilities =
+            Preview.getPreviewCapabilities(cameraProvider.getCameraInfo(cameraSelector))
+
+        assertThat(capabilities.isStabilizationSupported()).isFalse()
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 23)
+    fun getPreviewCapabilitiesStabilizationSupportIsCorrect_whenSupportedInExtensions() {
+        assumeFalse(isPreviewStabilizationModeSupported(CameraSelector.DEFAULT_BACK_CAMERA))
+        val sessionProcessor =
+            FakeSessionProcessor(
+                extensionSpecificChars =
+                    listOf(
+                        android.util.Pair(
+                            CameraCharacteristics.CONTROL_AVAILABLE_VIDEO_STABILIZATION_MODES,
+                            intArrayOf(
+                                CameraCharacteristics
+                                    .CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION
+                            )
+                        )
+                    )
+            )
+        val cameraSelector =
+            ExtensionsUtil.getCameraSelectorWithSessionProcessor(
+                cameraProvider,
+                CameraSelector.DEFAULT_BACK_CAMERA,
+                sessionProcessor
+            )
+        val capabilities =
+            Preview.getPreviewCapabilities(cameraProvider.getCameraInfo(cameraSelector))
+
+        assertThat(capabilities.isStabilizationSupported()).isTrue()
+    }
 
     @Test
     @SdkSuppress(minSdkVersion = 21, maxSdkVersion = 32)

@@ -16,6 +16,8 @@
 
 package androidx.camera.core.impl;
 
+import android.util.Range;
+
 import androidx.camera.core.FocusMeteringAction;
 import androidx.camera.core.FocusMeteringResult;
 import androidx.camera.core.impl.utils.SessionProcessorUtil;
@@ -96,6 +98,18 @@ public class AdapterCameraControl extends ForwardingCameraControl {
             return Futures.immediateFailedFuture(
                     new IllegalStateException("Zoom is not supported"));
         }
+
+        if (mSessionProcessor != null) {
+            Range<Float> extensionZoomRange = mSessionProcessor.getExtensionZoomRange();
+            if (extensionZoomRange != null
+                    && (ratio < extensionZoomRange.getLower()
+                    || ratio > extensionZoomRange.getUpper())) {
+                String outOfRangeDesc = "Requested zoomRatio " + ratio + " is not within valid "
+                        + "range [" + extensionZoomRange.getLower() + " , "
+                        + extensionZoomRange.getUpper() + "]";
+                return Futures.immediateFailedFuture(new IllegalArgumentException(outOfRangeDesc));
+            }
+        }
         return mCameraControl.setZoomRatio(ratio);
     }
 
@@ -106,6 +120,23 @@ public class AdapterCameraControl extends ForwardingCameraControl {
             return Futures.immediateFailedFuture(
                     new IllegalStateException("Zoom is not supported"));
         }
+
+        if (mSessionProcessor != null) {
+            Range<Float> extensionZoomRange = mSessionProcessor.getExtensionZoomRange();
+            if (extensionZoomRange == null) {
+                return mCameraControl.setLinearZoom(linearZoom);
+            }
+
+            if (linearZoom > 1.0f || linearZoom < 0f) {
+                String outOfRangeDesc = "Requested linearZoom " + linearZoom + " is not within"
+                        + " valid range [0..1]";
+                return Futures.immediateFailedFuture(new IllegalArgumentException(outOfRangeDesc));
+            }
+            float zoomRatio = AdapterCameraInfo.getZoomRatioByPercentage(linearZoom,
+                    extensionZoomRange.getLower(), extensionZoomRange.getUpper());
+            return mCameraControl.setZoomRatio(zoomRatio);
+        }
+
         return mCameraControl.setLinearZoom(linearZoom);
     }
 

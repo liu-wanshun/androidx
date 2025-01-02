@@ -33,8 +33,8 @@ import androidx.wear.protolayout.LayoutElementBuilders.Spacer
 import androidx.wear.protolayout.LayoutElementBuilders.Spannable
 import androidx.wear.protolayout.LayoutElementBuilders.Text
 import androidx.wear.protolayout.ModifiersBuilders.Clickable
-import androidx.wear.protolayout.TypeBuilders.StringProp
 import androidx.wear.protolayout.proto.DimensionProto
+import androidx.wear.protolayout.types.LayoutString
 
 /** Returns a [LayoutElementMatcher] which checks whether the element is clickable. */
 public fun isClickable(): LayoutElementMatcher =
@@ -89,12 +89,12 @@ public fun containsTag(value: String): LayoutElementMatcher =
 /**
  * Returns a [LayoutElementMatcher] which checks whether the element's text equals the given value.
  */
-public fun hasText(value: StringProp): LayoutElementMatcher =
+public fun hasText(value: LayoutString): LayoutElementMatcher =
     LayoutElementMatcher("Element text = '$value'") {
         it is Text &&
             // TODO: b/375448507 - Add dynamic data evaluation and compare the current string value
-            it.text?.toProto()?.value == value.toProto().value &&
-            it.text?.toProto()?.dynamicValue == value.toProto().dynamicValue
+            it.text?.toProto()?.value == value.staticValue &&
+            it.text?.toProto()?.dynamicValue == value.dynamicValue?.toDynamicStringProto()
     }
 
 /**

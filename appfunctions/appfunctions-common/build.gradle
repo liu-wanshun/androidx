@@ -31,10 +31,25 @@ plugins {
 
 dependencies {
     api(libs.kotlinStdlib)
-    // Add dependencies here
+    // Public dependencies
+    api("androidx.appsearch:appsearch:1.1.0-alpha07")
+
+    // Internal dependencies
+    implementation("androidx.annotation:annotation:1.8.1")
+
+    // Compile only dependencies
+    compileOnly(fileTree(dir: "../appfunctions-stubs", include: ["com.android.extensions.appfunctions-stubs.jar"]))
+
+    // Test dependencies
+    androidTestImplementation(libs.testCore)
+    androidTestImplementation(libs.testRules)
+    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.junit)
+    androidTestCompileOnly(fileTree(dir: "../appfunctions-stubs", include: ["com.android.extensions.appfunctions-stubs.jar"]))
 }
 
 android {
+    compileSdk = 35
     namespace "androidx.appfunctions.common"
 }
 

@@ -28,7 +28,8 @@ import androidx.compose.ui.internal.checkPreconditionNotNull
 internal class FocusTransactionManager {
     private val states = mutableScatterMapOf<FocusTargetNode, FocusStateImpl>()
     private val cancellationListener = mutableVectorOf<() -> Unit>()
-    private var ongoingTransaction = false
+    var ongoingTransaction = false
+        private set
 
     /**
      * An indicator of changes to the transaction. When any state changes, the generation changes.

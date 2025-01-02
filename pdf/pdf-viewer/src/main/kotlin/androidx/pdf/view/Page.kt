@@ -21,6 +21,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Paint.Style
 import android.graphics.Point
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
 import androidx.annotation.RestrictTo
@@ -28,6 +30,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.pdf.PdfDocument
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /** A single PDF page that knows how to render and draw itself */
@@ -46,6 +49,8 @@ internal class Page(
      * threshold for tiled rendering
      */
     maxBitmapSizePx: Point,
+    /** Whether touch exploration is enabled */
+    private val isTouchExplorationEnabled: Boolean,
     /** A function to call when the [PdfView] hosting this [Page] ought to invalidate itself */
     onPageUpdate: () -> Unit,
     /** A function to call when page text is ready (invoked with page number). */
@@ -67,42 +72,58 @@ internal class Page(
         )
 
     // Pre-allocated values to avoid allocations at drawing time
-    private val highlightPaint = Paint().apply { style = Style.FILL }
+    private val highlightPaint =
+        Paint().apply {
+            style = Style.FILL
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
+            alpha = 255
+            isAntiAlias = true
+            isDither = true
+        }
     private val highlightRect = RectF()
     private val tileLocationRect = RectF()
-    internal var fetchPageTextJob: Job? = null
+
+    private var fetchPageTextJob: Job? = null
     internal var pageText: String? = null
+        private set
+
+    private var fetchLinksJob: Job? = null
     internal var links: PdfDocument.PdfPageLinks? = null
         private set
 
-    fun setVisible(zoom: Float) {
+    fun updateState(zoom: Float, isFlinging: Boolean = false) {
         bitmapFetcher.isActive = true
         bitmapFetcher.onScaleChanged(zoom)
-        if (links == null) {
-            fetchLinks()
+        if (!isFlinging) {
+            maybeFetchLinks()
+            if (isTouchExplorationEnabled) {
+                fetchPageText()
+            }
         }
-        fetchPageText()
     }
 
     fun setInvisible() {
         bitmapFetcher.isActive = false
-
         pageText = null
         fetchPageTextJob?.cancel()
         fetchPageTextJob = null
+        links = null
+        fetchLinksJob?.cancel()
+        fetchLinksJob = null
     }
 
-    fun fetchPageText() {
-        if (fetchPageTextJob?.isActive == true || pageText != null) {
-            return
-        }
+    private fun fetchPageText() {
+        if (fetchPageTextJob?.isActive == true || pageText != null) return
 
         fetchPageTextJob =
-            backgroundScope.launch {
-                pageText =
-                    pdfDocument.getPageContent(pageNum)?.textContents?.joinToString { it.text }
-                onPageTextReady.invoke(pageNum)
-            }
+            backgroundScope
+                .launch {
+                    ensureActive()
+                    pageText =
+                        pdfDocument.getPageContent(pageNum)?.textContents?.joinToString { it.text }
+                    onPageTextReady.invoke(pageNum)
+                }
+                .also { it.invokeOnCompletion { fetchPageTextJob = null } }
     }
 
     fun draw(canvas: Canvas, locationInView: Rect, highlights: List<Highlight>) {
@@ -126,8 +147,15 @@ internal class Page(
         }
     }
 
-    private fun fetchLinks() {
-        backgroundScope.launch { links = pdfDocument.getPageLinks(pageNum) }
+    private fun maybeFetchLinks() {
+        if (fetchLinksJob?.isActive == true || links != null) return
+        fetchLinksJob =
+            backgroundScope
+                .launch {
+                    ensureActive()
+                    links = pdfDocument.getPageLinks(pageNum)
+                }
+                .also { it.invokeOnCompletion { fetchLinksJob = null } }
     }
 
     private fun draw(fullPageBitmap: FullPageBitmap, canvas: Canvas, locationInView: Rect) {

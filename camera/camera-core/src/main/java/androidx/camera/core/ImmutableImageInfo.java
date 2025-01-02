@@ -36,12 +36,14 @@ public abstract class ImmutableImageInfo implements ImageInfo {
      * Creates an instance of {@link ImmutableImageInfo}.
      */
     public static @NonNull ImageInfo create(@NonNull TagBundle tag, long timestamp,
-            int rotationDegrees, @NonNull Matrix sensorToBufferTransformMatrix) {
+            int rotationDegrees, @NonNull Matrix sensorToBufferTransformMatrix,
+            @FlashState.FlashState int flashState) {
         return new AutoValue_ImmutableImageInfo(
                 tag,
                 timestamp,
                 rotationDegrees,
-                sensorToBufferTransformMatrix);
+                sensorToBufferTransformMatrix,
+                flashState);
     }
 
     @Override
@@ -55,6 +57,9 @@ public abstract class ImmutableImageInfo implements ImageInfo {
 
     @Override
     public abstract @NonNull Matrix getSensorToBufferTransformMatrix();
+
+    @Override
+    public abstract @FlashState.FlashState int getFlashState();
 
     @Override
     public void populateExifData(ExifData.@NonNull Builder exifBuilder) {

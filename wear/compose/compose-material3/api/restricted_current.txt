@@ -453,36 +453,36 @@ package androidx.wear.compose.material3 {
   }
 
   @androidx.compose.runtime.Immutable public final class DatePickerColors {
-    ctor public DatePickerColors(long selectedPickerContentColor, long unselectedPickerContentColor, long invalidPickerContentColor, long pickerLabelColor, long nextButtonContentColor, long nextButtonContainerColor, long confirmButtonContentColor, long confirmButtonContainerColor);
-    method public androidx.wear.compose.material3.DatePickerColors copy(optional long selectedPickerContentColor, optional long unselectedPickerContentColor, optional long invalidPickerContentColor, optional long pickerLabelColor, optional long nextButtonContentColor, optional long nextButtonContainerColor, optional long confirmButtonContentColor, optional long confirmButtonContainerColor);
+    ctor public DatePickerColors(long activePickerContentColor, long inactivePickerContentColor, long invalidPickerContentColor, long pickerLabelColor, long nextButtonContentColor, long nextButtonContainerColor, long confirmButtonContentColor, long confirmButtonContainerColor);
+    method public androidx.wear.compose.material3.DatePickerColors copy(optional long activePickerContentColor, optional long inactivePickerContentColor, optional long invalidPickerContentColor, optional long pickerLabelColor, optional long nextButtonContentColor, optional long nextButtonContainerColor, optional long confirmButtonContentColor, optional long confirmButtonContainerColor);
+    method public long getActivePickerContentColor();
     method public long getConfirmButtonContainerColor();
     method public long getConfirmButtonContentColor();
+    method public long getInactivePickerContentColor();
     method public long getInvalidPickerContentColor();
     method public long getNextButtonContainerColor();
     method public long getNextButtonContentColor();
     method public long getPickerLabelColor();
-    method public long getSelectedPickerContentColor();
-    method public long getUnselectedPickerContentColor();
+    property public final long activePickerContentColor;
     property public final long confirmButtonContainerColor;
     property public final long confirmButtonContentColor;
+    property public final long inactivePickerContentColor;
     property public final long invalidPickerContentColor;
     property public final long nextButtonContainerColor;
     property public final long nextButtonContentColor;
     property public final long pickerLabelColor;
-    property public final long selectedPickerContentColor;
-    property public final long unselectedPickerContentColor;
   }
 
   public final class DatePickerDefaults {
     method @androidx.compose.runtime.Composable public androidx.wear.compose.material3.DatePickerColors datePickerColors();
-    method @androidx.compose.runtime.Composable public androidx.wear.compose.material3.DatePickerColors datePickerColors(optional long selectedPickerContentColor, optional long unselectedPickerContentColor, optional long invalidPickerContentColor, optional long pickerLabelColor, optional long nextButtonContentColor, optional long nextButtonContainerColor, optional long confirmButtonContentColor, optional long confirmButtonContainerColor);
+    method @androidx.compose.runtime.Composable public androidx.wear.compose.material3.DatePickerColors datePickerColors(optional long activePickerContentColor, optional long inactivePickerContentColor, optional long invalidPickerContentColor, optional long pickerLabelColor, optional long nextButtonContentColor, optional long nextButtonContainerColor, optional long confirmButtonContentColor, optional long confirmButtonContainerColor);
     method @androidx.compose.runtime.Composable public int getDatePickerType();
     property @androidx.compose.runtime.Composable public final int datePickerType;
     field public static final androidx.wear.compose.material3.DatePickerDefaults INSTANCE;
   }
 
   public final class DatePickerKt {
-    method @RequiresApi(android.os.Build.VERSION_CODES.O) @androidx.compose.runtime.Composable public static void DatePicker(java.time.LocalDate initialDate, kotlin.jvm.functions.Function1<? super java.time.LocalDate,kotlin.Unit> onDatePicked, optional androidx.compose.ui.Modifier modifier, optional java.time.LocalDate? minDate, optional java.time.LocalDate? maxDate, optional int datePickerType, optional androidx.wear.compose.material3.DatePickerColors colors);
+    method @RequiresApi(android.os.Build.VERSION_CODES.O) @androidx.compose.runtime.Composable public static void DatePicker(java.time.LocalDate initialDate, kotlin.jvm.functions.Function1<? super java.time.LocalDate,kotlin.Unit> onDatePicked, optional androidx.compose.ui.Modifier modifier, optional java.time.LocalDate? minValidDate, optional java.time.LocalDate? maxValidDate, optional int datePickerType, optional androidx.wear.compose.material3.DatePickerColors colors);
   }
 
   @androidx.compose.runtime.Immutable @kotlin.jvm.JvmInline public final value class DatePickerType {

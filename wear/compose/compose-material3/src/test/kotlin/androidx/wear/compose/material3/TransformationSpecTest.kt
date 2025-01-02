@@ -35,10 +35,30 @@ class TransformationSpecTest {
             0.03f,
             0.04f,
             CubicBezierEasing(0.015f, 0.025f, 0.035f, 0.045f),
-            TransformVariableSpec(0.011f, 0.021f, 0.031f, 0.041f),
-            TransformVariableSpec(0.012f, 0.022f, 0.032f, 0.042f),
-            TransformVariableSpec(0.013f, 0.023f, 0.033f, 0.043f),
-            TransformVariableSpec(0.014f, 0.024f, 0.034f, 0.044f),
+            TransformVariableSpec(
+                topValue = 0.011f,
+                bottomValue = 0.021f,
+                transformationZoneEnterFraction = 0.031f,
+                transformationZoneExitFraction = 0.041f
+            ),
+            TransformVariableSpec(
+                topValue = 0.012f,
+                bottomValue = 0.022f,
+                transformationZoneEnterFraction = 0.032f,
+                transformationZoneExitFraction = 0.042f
+            ),
+            TransformVariableSpec(
+                topValue = 0.013f,
+                bottomValue = 0.023f,
+                transformationZoneEnterFraction = 0.033f,
+                transformationZoneExitFraction = 0.043f
+            ),
+            TransformVariableSpec(
+                topValue = 0.014f,
+                bottomValue = 0.024f,
+                transformationZoneEnterFraction = 0.034f,
+                transformationZoneExitFraction = 0.044f
+            ),
             0.95f,
             0.86f,
         )
@@ -50,10 +70,30 @@ class TransformationSpecTest {
             0.3f,
             0.4f,
             CubicBezierEasing(0.15f, 0.25f, 0.35f, 0.45f),
-            TransformVariableSpec(0.11f, 0.21f, 0.31f, 0.41f),
-            TransformVariableSpec(0.12f, 0.22f, 0.32f, 0.42f),
-            TransformVariableSpec(0.13f, 0.23f, 0.33f, 0.43f),
-            TransformVariableSpec(0.14f, 0.24f, 0.34f, 0.44f),
+            TransformVariableSpec(
+                topValue = 0.11f,
+                bottomValue = 0.21f,
+                transformationZoneEnterFraction = 0.31f,
+                transformationZoneExitFraction = 0.41f
+            ),
+            TransformVariableSpec(
+                topValue = 0.12f,
+                bottomValue = 0.22f,
+                transformationZoneEnterFraction = 0.32f,
+                transformationZoneExitFraction = 0.42f
+            ),
+            TransformVariableSpec(
+                topValue = 0.13f,
+                bottomValue = 0.23f,
+                transformationZoneEnterFraction = 0.33f,
+                transformationZoneExitFraction = 0.43f
+            ),
+            TransformVariableSpec(
+                topValue = 0.14f,
+                bottomValue = 0.24f,
+                transformationZoneEnterFraction = 0.34f,
+                transformationZoneExitFraction = 0.44f
+            ),
             0.95f,
             0.86f,
         )

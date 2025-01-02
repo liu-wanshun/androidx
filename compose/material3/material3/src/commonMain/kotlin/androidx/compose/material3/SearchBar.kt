@@ -23,17 +23,25 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.DecayAnimationSpec
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animateDecay
+import androidx.compose.animation.core.animateTo
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.MutatorMutex
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.DraggableState
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -54,6 +62,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
@@ -78,6 +88,7 @@ import androidx.compose.material3.internal.PredictiveBackState
 import androidx.compose.material3.internal.Strings
 import androidx.compose.material3.internal.SwipeEdge
 import androidx.compose.material3.internal.getString
+import androidx.compose.material3.internal.systemBarsForVisualComponents
 import androidx.compose.material3.internal.textFieldBackground
 import androidx.compose.material3.tokens.ElevationTokens
 import androidx.compose.material3.tokens.FilledTextFieldTokens
@@ -105,10 +116,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Color
@@ -118,10 +131,14 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.addOutline
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.takeOrElse
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.platform.InterceptPlatformTextInput
 import androidx.compose.ui.platform.LocalDensity
@@ -140,6 +157,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
@@ -217,6 +235,74 @@ internal fun SearchBar(
         tonalElevation = tonalElevation,
         shadowElevation = shadowElevation,
         content = content
+    )
+}
+
+/**
+ * <a href="https://m3.material.io/components/search/overview" class="external"
+ * target="_blank">Material Design search</a>.
+ *
+ * A search bar represents a field that allows users to enter a keyword or phrase and get relevant
+ * information. It can be used as a way to navigate through an app via search queries.
+ *
+ * A [TopSearchBar] can be used in conjunction with a [Scaffold] for a search bar that remains at
+ * the top of the screen.
+ *
+ * ![Search bar
+ * image](https://developer.android.com/images/reference/androidx/compose/material3/search-bar.png)
+ *
+ * @param state the state of the search bar. This state should also be passed to the [inputField].
+ * @param inputField the input field of this search bar that allows entering a query, typically a
+ *   [SearchBarDefaults.InputField].
+ * @param modifier the [Modifier] to be applied to this search bar when collapsed.
+ * @param shape the shape of this search bar when it is collapsed. When expanded, the shape will
+ *   always be [SearchBarDefaults.fullScreenShape].
+ * @param colors [SearchBarColors] that will be used to resolve the colors used for this search bar
+ *   in different states. See [SearchBarDefaults.colors].
+ * @param tonalElevation when [SearchBarColors.containerColor] is [ColorScheme.surface], a
+ *   translucent primary color overlay is applied on top of the container. A higher tonal elevation
+ *   value will result in a darker color in light theme and lighter color in dark theme. See also:
+ *   [Surface].
+ * @param shadowElevation the elevation for the shadow below this search bar.
+ * @param windowInsets the window insets that the search bar will respect when collapsed. When
+ *   expanded, the window insets will always be [SearchBarDefaults.fullScreenWindowInsets].
+ * @param scrollBehavior a [SearchBarScrollBehavior] which works in conjunction with a scrolled
+ *   content to change the search bar appearance as the content scrolls. If null, the search bar
+ *   will not automatically react to scrolling.
+ * @param content the content of this search bar to display search results below the [inputField].
+ */
+@ExperimentalMaterial3Api
+@Composable
+internal fun TopSearchBar(
+    state: SearchBarState,
+    inputField: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    shape: Shape = SearchBarDefaults.inputFieldShape,
+    colors: SearchBarColors = SearchBarDefaults.colors(),
+    tonalElevation: Dp = SearchBarDefaults.TonalElevation,
+    shadowElevation: Dp = SearchBarDefaults.ShadowElevation,
+    windowInsets: WindowInsets = SearchBarDefaults.windowInsets,
+    scrollBehavior: SearchBarScrollBehavior? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    SearchBar(
+        state = state,
+        inputField = inputField,
+        modifier =
+            modifier
+                .then(
+                    (scrollBehavior?.let { with(it) { Modifier.searchBarScrollBehavior() } }
+                        ?: Modifier)
+                )
+                .windowInsetsPadding(windowInsets)
+                .padding(SearchBarAsTopBarPadding)
+                .fillMaxWidth()
+                .wrapContentWidth(),
+        shape = shape,
+        colors = colors,
+        tonalElevation = tonalElevation,
+        shadowElevation = shadowElevation,
+        content = content,
     )
 }
 
@@ -500,7 +586,7 @@ internal fun ExpandedFullScreenSearchBar(
     colors: SearchBarColors = SearchBarDefaults.colors(),
     tonalElevation: Dp = SearchBarDefaults.TonalElevation,
     shadowElevation: Dp = SearchBarDefaults.ShadowElevation,
-    windowInsets: @Composable () -> WindowInsets = { SearchBarDefaults.windowInsets },
+    windowInsets: @Composable () -> WindowInsets = { SearchBarDefaults.fullScreenWindowInsets },
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (!state.isExpanded) return
@@ -656,6 +742,188 @@ internal fun rememberSearchBarState(
     }
 }
 
+/**
+ * A [SearchBarScrollBehavior] defines how a search bar should behave when the content beneath it is
+ * scrolled.
+ *
+ * @see [SearchBarDefaults.enterAlwaysSearchBarScrollBehavior]
+ */
+@ExperimentalMaterial3Api
+@Stable
+internal interface SearchBarScrollBehavior {
+    /**
+     * The search bar's current offset due to scrolling, in pixels. This offset is applied to the
+     * fixed size of the search bar to control the displayed size when content is being scrolled.
+     *
+     * This value is typically negative.
+     *
+     * Updates to the [scrollOffset] value are coerced between [scrollOffsetLimit] and 0.
+     */
+    var scrollOffset: Float
+
+    /**
+     * The limit that a search bar can be offset due to scrolling, in pixels.
+     *
+     * This value is typically negative.
+     *
+     * Use this limit to coerce the [scrollOffset] value when it's updated.
+     */
+    var scrollOffsetLimit: Float
+
+    /**
+     * A [NestedScrollConnection] that should be attached to a [Modifier.nestedScroll] in order to
+     * keep track of scroll events.
+     */
+    val nestedScrollConnection: NestedScrollConnection
+
+    /**
+     * The modifier that adds scrolling behavior to the search bar component. [TopSearchBar] applies
+     * this automatically.
+     */
+    fun Modifier.searchBarScrollBehavior(): Modifier
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Stable
+private class EnterAlwaysSearchBarScrollBehavior(
+    initialOffset: Float,
+    initialOffsetLimit: Float,
+    val canScroll: () -> Boolean,
+    val reverseLayout: Boolean,
+    val snapAnimationSpec: AnimationSpec<Float>,
+    val flingAnimationSpec: DecayAnimationSpec<Float>,
+) : SearchBarScrollBehavior {
+    private var _offset = mutableFloatStateOf(initialOffset)
+
+    override var scrollOffset: Float
+        get() = _offset.floatValue
+        set(newOffset) {
+            _offset.floatValue = newOffset.coerceIn(scrollOffsetLimit, 0f)
+        }
+
+    override var scrollOffsetLimit by mutableFloatStateOf(initialOffsetLimit)
+
+    override fun Modifier.searchBarScrollBehavior(): Modifier {
+        return this.draggable(
+                orientation = Orientation.Vertical,
+                state = DraggableState { delta -> scrollOffset += delta },
+                onDragStopped = { velocity -> settleSearchBar(velocity) },
+                enabled = canScroll(),
+            )
+            .clipToBounds()
+            .layout { measurable, constraints ->
+                val placeable = measurable.measure(constraints)
+                val scrollOffset = scrollOffset.roundToInt()
+                val scrolledHeight = (placeable.height + scrollOffset).coerceAtLeast(0)
+                layout(placeable.width, scrolledHeight) {
+                    placeable.placeWithLayer(0, scrollOffset)
+                }
+            }
+            .onSizeChanged { size -> scrollOffsetLimit = -size.height.toFloat() }
+    }
+
+    override val nestedScrollConnection: NestedScrollConnection =
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (!canScroll()) return Offset.Zero
+                val prevScrollOffset = scrollOffset
+                scrollOffset += available.y
+                // The scrollOffset is coerced between scrollOffsetLimit and 0, so we check if its
+                // value was actually changed after available.y is added. If so, the search bar is
+                // currently  in between scroll states.
+                // Note: when the content is set with reversed layout, we always return Offset.Zero.
+                return if (!reverseLayout && prevScrollOffset != scrollOffset) {
+                    available.copy(x = 0f)
+                } else {
+                    Offset.Zero
+                }
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (!canScroll()) return Offset.Zero
+                if (reverseLayout && available.y > 0f) {
+                    // In a reversed layout, consume scroll if it's a pull down
+                    // to reveal the search bar but not if it's a pull up to hide.
+                    scrollOffset += available.y
+                    return available.copy(x = 0f)
+                }
+                if (!reverseLayout) scrollOffset += consumed.y
+                return Offset.Zero
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (!canScroll()) return Velocity.Zero
+                return settleSearchBar(available.y)
+            }
+        }
+
+    private suspend fun settleSearchBar(velocity: Float): Velocity {
+        // Check if the search bar scroll is at a scroll limit. If so, no need to settle the search
+        // bar, and just return Velocity.Zero.
+        // Note that we don't check for 0f due to float precision with the scrollFraction
+        // calculation.
+        val scrollFraction = if (scrollOffsetLimit != 0f) scrollOffset / scrollOffsetLimit else 0f
+        if (scrollFraction < 0.01f || scrollFraction == 1f) {
+            return Velocity.Zero
+        }
+        var remainingVelocity = velocity
+        // In case there is an initial velocity that was left after a previous user fling, animate
+        // to continue the motion to scroll the search bar.
+        if (abs(velocity) > 1f) {
+            var lastValue = 0f
+            AnimationState(
+                    initialValue = 0f,
+                    initialVelocity = velocity,
+                )
+                .animateDecay(flingAnimationSpec) {
+                    val delta = value - lastValue
+                    val initialScrollOffset = scrollOffset
+                    scrollOffset = initialScrollOffset + delta
+                    val consumed = abs(initialScrollOffset - scrollOffset)
+                    lastValue = value
+                    remainingVelocity = this.velocity
+                    // avoid rounding errors and stop if anything is unconsumed
+                    if (abs(delta - consumed) > 0.5f) this.cancelAnimation()
+                }
+        }
+        if (scrollOffsetLimit < scrollOffset && scrollOffset < 0) {
+            AnimationState(initialValue = scrollOffset).animateTo(
+                targetValue = if (scrollFraction < 0.5f) 0f else scrollOffsetLimit,
+                animationSpec = snapAnimationSpec,
+            ) {
+                scrollOffset = value
+            }
+        }
+
+        return Velocity(0f, remainingVelocity)
+    }
+
+    companion object {
+        fun Saver(
+            canScroll: () -> Boolean,
+            snapAnimationSpec: AnimationSpec<Float>,
+            flingAnimationSpec: DecayAnimationSpec<Float>,
+        ): Saver<EnterAlwaysSearchBarScrollBehavior, *> =
+            listSaver(
+                save = { listOf(it.scrollOffset, it.scrollOffsetLimit, it.reverseLayout) },
+                restore = {
+                    EnterAlwaysSearchBarScrollBehavior(
+                        initialOffset = it[0] as Float,
+                        initialOffsetLimit = it[1] as Float,
+                        reverseLayout = it[2] as Boolean,
+                        canScroll = canScroll,
+                        snapAnimationSpec = snapAnimationSpec,
+                        flingAnimationSpec = flingAnimationSpec,
+                    )
+                }
+            )
+    }
+}
+
 /** Defaults used in [SearchBar] and [DockedSearchBar]. */
 @ExperimentalMaterial3Api
 object SearchBarDefaults {
@@ -689,7 +957,72 @@ object SearchBarDefaults {
 
     /** Default window insets for a [SearchBar]. */
     val windowInsets: WindowInsets
+        @Composable
+        get() =
+            WindowInsets.systemBarsForVisualComponents.only(
+                WindowInsetsSides.Horizontal + WindowInsetsSides.Top
+            )
+
+    /**
+     * Default window insets used and consumed by a full screen search bar in the expanded state.
+     */
+    internal val fullScreenWindowInsets: WindowInsets
         @Composable get() = WindowInsets.safeDrawing
+
+    /**
+     * Returns a [SearchBarScrollBehavior]. A search bar that is set up with this behavior will
+     * immediately scroll upward off-screen when the content is pulled up, and will immediately
+     * appear when the content is pulled down.
+     *
+     * The returned [SearchBarScrollBehavior] is remembered across compositions.
+     *
+     * @param initialOffset the initial value for [SearchBarScrollBehavior.scrollOffset]. Should be
+     *   between [initialOffsetLimit] and 0.
+     * @param initialOffsetLimit the initial value for [SearchBarScrollBehavior.scrollOffsetLimit],
+     *   which represents the pixel limit that a search bar is allowed to scroll off-screen when the
+     *   content is scrolled.
+     * @param canScroll a callback used to determine whether scroll events are to be handled by this
+     *   [SearchBarScrollBehavior].
+     * @param snapAnimationSpec an [AnimationSpec] that defines how the search bar's scroll offset
+     *   snaps to either its limit or 0 when a fling or a drag scrolls it into an intermediate
+     *   position.
+     * @param flingAnimationSpec a [DecayAnimationSpec] that defines how to fling the search bar
+     *   when the user flings the search bar itself, or the content beneath it.
+     * @param reverseLayout indicates that this behavior is applied to a scrollable content that has
+     *   a reversed direction of scrolling and layout.
+     */
+    @ExperimentalMaterial3Api
+    @Composable
+    internal fun enterAlwaysSearchBarScrollBehavior(
+        initialOffset: Float = 0f,
+        initialOffsetLimit: Float = -Float.MAX_VALUE,
+        canScroll: () -> Boolean = { true },
+        // TODO Load the motionScheme tokens from the component tokens file
+        snapAnimationSpec: AnimationSpec<Float> = MotionSchemeKeyTokens.DefaultEffects.value(),
+        flingAnimationSpec: DecayAnimationSpec<Float> = rememberSplineBasedDecay(),
+        reverseLayout: Boolean = false,
+    ): SearchBarScrollBehavior =
+        rememberSaveable(
+            snapAnimationSpec,
+            flingAnimationSpec,
+            canScroll,
+            reverseLayout,
+            saver =
+                EnterAlwaysSearchBarScrollBehavior.Saver(
+                    canScroll = canScroll,
+                    snapAnimationSpec = snapAnimationSpec,
+                    flingAnimationSpec = flingAnimationSpec,
+                )
+        ) {
+            EnterAlwaysSearchBarScrollBehavior(
+                initialOffset = initialOffset,
+                initialOffsetLimit = initialOffsetLimit,
+                canScroll = canScroll,
+                reverseLayout = reverseLayout,
+                snapAnimationSpec = snapAnimationSpec,
+                flingAnimationSpec = flingAnimationSpec,
+            )
+        }
 
     /**
      * Creates a [SearchBarColors] that represents the different colors used in parts of the search
@@ -1971,6 +2304,14 @@ private fun FullScreenSearchBarLayout(
         val inputFieldPlaceable =
             inputFieldMeasurable.measure(Constraints.fixed(width, state.collapsedBounds.height))
 
+        val topPadding = unconsumedInsets.getTop(this@Layout) + SearchBarVerticalPadding.roundToPx()
+        val bottomPadding = SearchBarVerticalPadding.roundToPx()
+        val animatedTopPadding =
+            lerp(0, topPadding, min(state.progress, 1 - predictiveBackProgress))
+        val animatedBottomPadding = lerp(0, bottomPadding, state.progress)
+
+        val paddedInputFieldHeight =
+            inputFieldPlaceable.height + animatedTopPadding + animatedBottomPadding
         val contentMeasurable = measurables.fastFirst { it.layoutId == LayoutIdSearchContent }
         val contentPlaceable =
             contentMeasurable.measure(
@@ -1978,18 +2319,11 @@ private fun FullScreenSearchBarLayout(
                     minWidth = width,
                     maxWidth = width,
                     minHeight = 0,
-                    maxHeight = height,
+                    maxHeight = (height - paddedInputFieldHeight).coerceAtLeast(0),
                 )
             )
 
         layout(constraints.maxWidth, constraints.maxHeight) {
-            val topPadding =
-                unconsumedInsets.getTop(this@Layout) + SearchBarVerticalPadding.roundToPx()
-            val bottomPadding = SearchBarVerticalPadding.roundToPx()
-            val animatedTopPadding =
-                lerp(0, topPadding, min(state.progress, 1 - predictiveBackProgress))
-            val animatedBottomPadding = lerp(0, bottomPadding, state.progress)
-
             fun BackEventProgress.InProgress.endOffsetX(): Int =
                 (if (swipeEdge == SwipeEdge.Left) {
                         constraints.maxWidth -
@@ -2174,6 +2508,7 @@ private const val LayoutIdSurface = "Surface"
 private const val LayoutIdSearchContent = "Content"
 
 // Measurement specs
+private val SearchBarAsTopBarPadding = 8.dp
 @OptIn(ExperimentalMaterial3Api::class) private val SearchBarCornerRadius: Dp = InputFieldHeight / 2
 internal val DockedExpandedTableMinHeight: Dp = 240.dp
 private const val DockedExpandedTableMaxHeightScreenRatio: Float = 2f / 3f

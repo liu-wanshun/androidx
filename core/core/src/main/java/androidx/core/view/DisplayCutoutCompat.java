@@ -266,7 +266,8 @@ public final class DisplayCutoutCompat {
             // This class is not instantiable.
         }
 
-        static DisplayCutout createDisplayCutout(Rect safeInsets, List<Rect> boundingRects) {
+        static DisplayCutout createDisplayCutout(
+                @Nullable Rect safeInsets, @Nullable List<Rect> boundingRects) {
             return new DisplayCutout(safeInsets, boundingRects);
         }
 
@@ -297,8 +298,9 @@ public final class DisplayCutoutCompat {
             // This class is not instantiable.
         }
 
-        static DisplayCutout createDisplayCutout(android.graphics.Insets safeInsets, Rect boundLeft,
-                Rect boundTop, Rect boundRight, Rect boundBottom) {
+        static DisplayCutout createDisplayCutout(android.graphics.@NonNull Insets safeInsets,
+                @Nullable Rect boundLeft, @Nullable Rect boundTop, @Nullable Rect boundRight,
+                @Nullable Rect boundBottom) {
             return new DisplayCutout(safeInsets, boundLeft, boundTop, boundRight, boundBottom);
         }
     }
@@ -309,9 +311,10 @@ public final class DisplayCutoutCompat {
             // This class is not instantiable.
         }
 
-        static DisplayCutout createDisplayCutout(android.graphics.Insets safeInsets, Rect boundLeft,
-                Rect boundTop, Rect boundRight, Rect boundBottom,
-                android.graphics.Insets waterfallInsets) {
+        static DisplayCutout createDisplayCutout(
+                android.graphics.@NonNull Insets safeInsets, @Nullable Rect boundLeft,
+                @Nullable Rect boundTop, @Nullable Rect boundRight, @Nullable Rect boundBottom,
+                android.graphics.@NonNull Insets waterfallInsets) {
             return new DisplayCutout(safeInsets, boundLeft, boundTop, boundRight, boundBottom,
                     waterfallInsets);
         }
@@ -338,18 +341,30 @@ public final class DisplayCutoutCompat {
             // This class is not instantiable.
         }
 
-        static DisplayCutout createDisplayCutout(android.graphics.Insets safeInsets, Rect boundLeft,
-                Rect boundTop, Rect boundRight, Rect boundBottom,
-                android.graphics.Insets waterfallInsets, Path cutoutPath) {
-            return new DisplayCutout.Builder()
+        static DisplayCutout createDisplayCutout(
+                android.graphics.@NonNull Insets safeInsets, @Nullable Rect boundLeft,
+                @Nullable Rect boundTop, @Nullable Rect boundRight, @Nullable Rect boundBottom,
+                android.graphics.@NonNull Insets waterfallInsets, @Nullable Path cutoutPath) {
+            DisplayCutout.Builder builder = new DisplayCutout.Builder()
                     .setSafeInsets(safeInsets)
-                    .setBoundingRectLeft(boundLeft)
-                    .setBoundingRectTop(boundTop)
-                    .setBoundingRectRight(boundRight)
-                    .setBoundingRectBottom(boundBottom)
-                    .setWaterfallInsets(waterfallInsets)
-                    .setCutoutPath(cutoutPath)
-                    .build();
+                    .setWaterfallInsets(waterfallInsets);
+
+            if (boundLeft != null) {
+                builder.setBoundingRectLeft(boundLeft);
+            }
+            if (boundTop != null) {
+                builder.setBoundingRectTop(boundTop);
+            }
+            if (boundRight != null) {
+                builder.setBoundingRectRight(boundRight);
+            }
+            if (boundBottom != null) {
+                builder.setBoundingRectBottom(boundBottom);
+            }
+            if (cutoutPath != null) {
+                builder.setCutoutPath(cutoutPath);
+            }
+            return builder.build();
         }
     }
 }

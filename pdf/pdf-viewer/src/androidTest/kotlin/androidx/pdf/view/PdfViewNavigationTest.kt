@@ -25,7 +25,6 @@ import android.widget.FrameLayout
 import androidx.pdf.PdfDocument
 import androidx.pdf.content.PdfPageGotoLinkContent
 import androidx.pdf.content.PdfPageLinkContent
-import androidx.pdf.util.waitForIntent
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso
 import androidx.test.espresso.intent.Intents
@@ -37,7 +36,6 @@ import androidx.test.filters.LargeTest
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.After
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -49,33 +47,7 @@ class PdfViewNavigationTest {
         PdfViewTestActivity.onCreateCallback = {}
     }
 
-    @Ignore("Ignored due to flakiness. Pending fix.")
-    @Test
-    fun testGotoLinkNavigation() {
-        // TODO(b/384644788): Fix flakiness in goto link navigation
-        val fakePdfDocument =
-            FakePdfDocument(
-                pages = List(2) { Point(1000, 1000) },
-                pageLinks =
-                    listOf(
-                        PdfDocument.PdfPageLinks(
-                            gotoLinks =
-                                listOf(
-                                    PdfPageGotoLinkContent(
-                                        bounds = listOf(RectF(0f, 0f, 1000f, 1000f)),
-                                        destination =
-                                            PdfPageGotoLinkContent.Destination(
-                                                pageNumber = 1,
-                                                xCoordinate = 100f,
-                                                yCoordinate = 1400f,
-                                                zoom = 1f
-                                            )
-                                    )
-                                ),
-                            externalLinks = emptyList()
-                        )
-                    )
-            )
+    private fun setupPdfView(width: Int, height: Int, fakePdfDocument: FakePdfDocument?) {
         PdfViewTestActivity.onCreateCallback = { activity ->
             val container = FrameLayout(activity)
             container.addView(
@@ -83,79 +55,150 @@ class PdfViewNavigationTest {
                     pdfDocument = fakePdfDocument
                     id = PDF_VIEW_ID
                 },
-                ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
+                ViewGroup.LayoutParams(width, height)
             )
             activity.setContentView(container)
-        }
-
-        with(ActivityScenario.launch(PdfViewTestActivity::class.java)) {
-            Espresso.onView(withId(PDF_VIEW_ID))
-                .perform(performSingleTapOnCoords(100f, 100f))
-                .check { view, noViewFoundException ->
-                    view ?: throw noViewFoundException
-                    val pdfView = view as PdfView
-                    val firstVisiblePage = pdfView.firstVisiblePage
-                    val visiblePagesCount = pdfView.visiblePagesCount
-                    val targetPage = 1
-                    assertThat(targetPage).isAtLeast(firstVisiblePage)
-                    assertThat(targetPage).isAtMost(firstVisiblePage + visiblePagesCount - 1)
-                }
-            close()
         }
     }
 
-    @Ignore("Test is skipped due to challenges in testing external intent matching. Pending fix.")
     @Test
-    fun testExternalLinkNavigation() = runTest {
-        // TODO(b/384644788): Fix intent resolution in external links handling
+    fun testGotoLinkNavigation_withValidPage() = runTest {
         val fakePdfDocument =
             FakePdfDocument(
-                pages = List(5) { Point(1000, 1000) },
+                pages = List(20) { Point(100, 200) },
                 pageLinks =
-                    listOf(
-                        PdfDocument.PdfPageLinks(
-                            gotoLinks = emptyList(),
-                            externalLinks =
-                                listOf(
-                                    PdfPageLinkContent(
-                                        bounds = listOf(RectF(0f, 0f, 200f, 200f)),
-                                        uri = Uri.parse("https://www.example.com")
-                                    )
-                                )
-                        )
+                    mapOf(
+                        0 to
+                            PdfDocument.PdfPageLinks(
+                                gotoLinks =
+                                    listOf(
+                                        PdfPageGotoLinkContent(
+                                            bounds = listOf(RectF(0f, 0f, 100f, 200f)),
+                                            destination =
+                                                PdfPageGotoLinkContent.Destination(
+                                                    pageNumber = VALID_PAGE_NUMBER,
+                                                    xCoordinate = 10f,
+                                                    yCoordinate = 40f,
+                                                    zoom = 1f
+                                                )
+                                        )
+                                    ),
+                                externalLinks = emptyList()
+                            ),
                     )
             )
+        setupPdfView(100, 1000, fakePdfDocument)
 
-        Intents.init()
-        PdfViewTestActivity.onCreateCallback = { activity ->
-            val container = FrameLayout(activity)
-            container.addView(
-                PdfView(activity).apply {
-                    pdfDocument = fakePdfDocument
-                    id = PDF_VIEW_ID
-                },
-                ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-            )
-            activity.setContentView(container)
-        }
-
+        var firstVisiblePage = 0
+        var visiblePagesCount = 0
         with(ActivityScenario.launch(PdfViewTestActivity::class.java)) {
-            Espresso.onView(withId(PDF_VIEW_ID)).perform(performSingleTapOnCoords(50f, 50f))
-            waitForIntent {
-                Intents.intended(hasAction(Intent.ACTION_VIEW))
-                Intents.intended(hasData(Uri.parse("https://www.example.com")))
+            fakePdfDocument.waitForLayout(untilPage = VALID_PAGE_NUMBER)
+            fakePdfDocument.waitForRender(untilPage = 0)
+
+            Espresso.onView(withId(PDF_VIEW_ID)).perform(performSingleTapOnCoords(10f, 40f))
+
+            fakePdfDocument.waitForLayout(untilPage = VALID_PAGE_NUMBER)
+
+            Espresso.onView(withId(PDF_VIEW_ID)).check { view, noViewFoundException ->
+                view ?: throw noViewFoundException
+                val pdfView = view as PdfView
+                firstVisiblePage = pdfView.firstVisiblePage
+                visiblePagesCount = pdfView.visiblePagesCount
             }
             close()
         }
+        assertThat(VALID_PAGE_NUMBER).isAtLeast(firstVisiblePage)
+        assertThat(VALID_PAGE_NUMBER).isAtMost(firstVisiblePage + visiblePagesCount - 1)
+    }
+
+    @Test
+    fun testGotoLinkNavigation_withInvalidPage() = runTest {
+        val fakePdfDocument =
+            FakePdfDocument(
+                pages = List(5) { Point(100, 200) },
+                pageLinks =
+                    mapOf(
+                        0 to
+                            PdfDocument.PdfPageLinks(
+                                gotoLinks =
+                                    listOf(
+                                        PdfPageGotoLinkContent(
+                                            bounds = listOf(RectF(0f, 0f, 100f, 200f)),
+                                            destination =
+                                                PdfPageGotoLinkContent.Destination(
+                                                    pageNumber = NON_EXISTENT_PAGE_NUMBER,
+                                                    xCoordinate = 10f,
+                                                    yCoordinate = 40f,
+                                                    zoom = 1f
+                                                )
+                                        )
+                                    ),
+                                externalLinks = emptyList()
+                            )
+                    )
+            )
+        setupPdfView(100, 1000, fakePdfDocument)
+
+        var firstVisiblePage = 0
+        var visiblePagesCount = 0
+        with(ActivityScenario.launch(PdfViewTestActivity::class.java)) {
+            fakePdfDocument.waitForRender(untilPage = 0)
+
+            Espresso.onView(withId(PDF_VIEW_ID)).perform(performSingleTapOnCoords(10f, 40f))
+
+            fakePdfDocument.waitForLayout(untilPage = 0)
+
+            Espresso.onView(withId(PDF_VIEW_ID)).check { view, noViewFoundException ->
+                view ?: throw noViewFoundException
+                val pdfView = view as PdfView
+                firstVisiblePage = pdfView.firstVisiblePage
+                visiblePagesCount = pdfView.visiblePagesCount
+            }
+            close()
+        }
+
+        assertThat(firstVisiblePage).isEqualTo(0)
+        assertThat(visiblePagesCount).isGreaterThan(0)
+    }
+
+    @Test
+    fun testExternalLinkNavigation_withValidUri() = runTest {
+        val fakePdfDocument =
+            FakePdfDocument(
+                pages = List(10) { Point(100, 200) },
+                pageLinks =
+                    mapOf(
+                        0 to
+                            PdfDocument.PdfPageLinks(
+                                gotoLinks = emptyList(),
+                                externalLinks =
+                                    listOf(
+                                        PdfPageLinkContent(
+                                            bounds = listOf(RectF(0f, 0f, 100f, 200f)),
+                                            uri = Uri.parse(URI_WITH_VALID_SCHEME)
+                                        )
+                                    ),
+                            ),
+                    )
+            )
+        setupPdfView(100, 1000, fakePdfDocument)
+
+        Intents.init()
+        with(ActivityScenario.launch(PdfViewTestActivity::class.java)) {
+            fakePdfDocument.waitForLayout(1)
+            fakePdfDocument.waitForRender(1)
+            Espresso.onView(withId(PDF_VIEW_ID)).perform(performSingleTapOnCoords(10f, 40f))
+            close()
+        }
+        Espresso.onIdle()
+        Intents.intended(hasAction(Intent.ACTION_VIEW))
+        Intents.intended(hasData(Uri.parse(URI_WITH_VALID_SCHEME)))
         Intents.release()
     }
 }
 
 /** Arbitrary fixed ID for PdfView */
 private const val PDF_VIEW_ID = 123456789
+private const val URI_WITH_VALID_SCHEME = "https://www.example.com"
+private const val VALID_PAGE_NUMBER = 4
+private const val NON_EXISTENT_PAGE_NUMBER = 11

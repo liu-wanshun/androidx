@@ -17,6 +17,7 @@ package androidx.appsearch.platformstorage;
 
 import android.app.appsearch.AppSearchResult;
 import android.app.appsearch.BatchResultCallback;
+import android.content.Context;
 import android.os.Build;
 
 import androidx.annotation.DoNotInline;
@@ -67,6 +68,7 @@ import java.util.function.Consumer;
 class GlobalSearchSessionImpl implements GlobalSearchSession {
     private final android.app.appsearch.GlobalSearchSession mPlatformSession;
     private final Executor mExecutor;
+    private final Context mContext;
     private final Features mFeatures;
 
     // Management of observer callbacks.
@@ -77,10 +79,11 @@ class GlobalSearchSessionImpl implements GlobalSearchSession {
     GlobalSearchSessionImpl(
             android.app.appsearch.@NonNull GlobalSearchSession platformSession,
             @NonNull Executor executor,
-            @NonNull Features features) {
+            @NonNull Context context) {
         mPlatformSession = Preconditions.checkNotNull(platformSession);
         mExecutor = Preconditions.checkNotNull(executor);
-        mFeatures = Preconditions.checkNotNull(features);
+        mContext = Preconditions.checkNotNull(context);
+        mFeatures = new FeaturesImpl(mContext);
     }
 
     @Override
@@ -113,8 +116,8 @@ class GlobalSearchSessionImpl implements GlobalSearchSession {
         android.app.appsearch.SearchResults platformSearchResults =
                 mPlatformSession.search(
                         queryExpression,
-                        SearchSpecToPlatformConverter.toPlatformSearchSpec(searchSpec));
-        return new SearchResultsImpl(platformSearchResults, searchSpec, mExecutor);
+                        SearchSpecToPlatformConverter.toPlatformSearchSpec(mContext, searchSpec));
+        return new SearchResultsImpl(platformSearchResults, searchSpec, mExecutor, mContext);
     }
 
     @Override

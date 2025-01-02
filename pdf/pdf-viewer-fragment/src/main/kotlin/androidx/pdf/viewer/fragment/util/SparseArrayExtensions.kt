@@ -52,6 +52,5 @@ internal fun SparseArray<List<PageMatchBounds>>.getFlattenedIndex(
     // Now, add the item index within the specified list
     currentSelection += resultIndex
 
-    // Adjust for 1-indexed system
-    return if (isEmpty()) 0 else currentSelection + 1
+    return if (isEmpty()) 0 else currentSelection
 }

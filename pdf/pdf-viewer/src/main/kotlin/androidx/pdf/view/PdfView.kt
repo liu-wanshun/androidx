@@ -16,6 +16,7 @@
 
 package androidx.pdf.view
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
@@ -31,11 +32,12 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
-import android.widget.OverScroller
 import androidx.annotation.RestrictTo
+import androidx.annotation.VisibleForTesting
 import androidx.core.os.HandlerCompat
 import androidx.core.view.ViewCompat
 import androidx.pdf.PdfDocument
+import androidx.pdf.util.Accessibility
 import androidx.pdf.util.ZoomUtils
 import java.util.LinkedList
 import java.util.Queue
@@ -159,14 +161,23 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
     private var scrollPositionToRestore: PointF? = null
     private var zoomToRestore: Float? = null
 
-    private val gestureTracker =
-        GestureTracker(context).apply { delegate = ZoomScrollGestureHandler() }
-    private val scroller = OverScroller(context)
+    private val gestureHandler = ZoomScrollGestureHandler()
+    private val gestureTracker = GestureTracker(context).apply { delegate = gestureHandler }
+
+    private val scroller = RelativeScroller(context)
+    /** Whether we are in a fling movement. This is used to detect the end of that movement */
+    private var isFling = false
 
     // To avoid allocations during drawing
     private val visibleAreaRect = Rect()
 
-    private var accessibilityPageHelper: AccessibilityPageHelper? = null
+    @VisibleForTesting internal var accessibilityPageHelper: AccessibilityPageHelper? = null
+    @VisibleForTesting
+    internal var isTouchExplorationEnabled: Boolean =
+        Accessibility.get().isTouchExplorationEnabled(context)
+        set(value) {
+            field = value
+        }
 
     /**
      * Scrolls to the 0-indexed [pageNum], optionally animating the scroll
@@ -176,7 +187,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
      * loaded from the PDF.
      */
     @Suppress("UNUSED_PARAMETER")
-    public fun scrollToPage(pageNum: Int, animateScroll: Boolean = false) {
+    public fun scrollToPage(pageNum: Int) {
         checkMainThread()
         val localPageLayoutManager =
             pageLayoutManager
@@ -207,8 +218,9 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
         val localPageLayoutManager =
             pageLayoutManager
                 ?: throw IllegalStateException("Can't scrollToPage without PdfDocument")
-        require(position.pageNum < (pdfDocument?.pageCount ?: Int.MIN_VALUE)) {
-            "Page ${position.pageNum} not in document"
+
+        if (position.pageNum >= (pdfDocument?.pageCount ?: Int.MIN_VALUE)) {
+            return
         }
 
         if (localPageLayoutManager.reach >= position.pageNum) {
@@ -373,6 +385,19 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
         }
     }
 
+    override fun computeScroll() {
+        // Cause OverScroller to compute the new position
+        if (scroller.computeScrollOffset()) {
+            scroller.apply(this)
+            postInvalidateOnAnimation()
+        } else if (isFling) {
+            isFling = false
+            // Once the fling has ended, prompt the page manager to start fetching data for pages
+            // that we don't fetch during a fling
+            pageManager?.maybeUpdatePageState(visiblePages, zoom, isFling)
+        }
+    }
+
     override fun scrollBy(x: Int, y: Int) {
         // This is precisely the implementation of View.scrollBy; this is defensive in case the
         // View implementation changes given we assume all scrolling flows through scrollTo
@@ -520,12 +545,14 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
         but reasonable threshold to use that does not depend on volatile state like the current
         screen orientation or the current size of our application's Window. */
         val maxBitmapDimensionPx = max(context.display.width, context.display.height)
+
         pageManager =
             PageManager(
                 localPdfDocument,
                 backgroundScope,
                 DEFAULT_PAGE_PREFETCH_RADIUS,
-                Point(maxBitmapDimensionPx, maxBitmapDimensionPx)
+                Point(maxBitmapDimensionPx, maxBitmapDimensionPx),
+                isTouchExplorationEnabled
             )
         // We'll either create our layout manager from restored state, or instantiate a new one
         if (!maybeRestoreState()) {
@@ -552,7 +579,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
         // Don't fetch new Bitmaps while the user is actively zooming, to avoid jank and rendering
         // churn
         if (!gestureTracker.matches(GestureTracker.Gesture.ZOOM)) {
-            pageManager?.maybeUpdateBitmaps(visiblePages, zoom)
+            pageManager?.maybeUpdatePageState(visiblePages, zoom, isFling)
         }
         accessibilityPageHelper?.invalidateRoot()
     }
@@ -562,10 +589,12 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
      * not actively changing due to user input
      */
     internal fun onStableZoom() {
-        pageManager?.maybeUpdateBitmaps(visiblePages, zoom)
+        pageManager?.maybeUpdatePageState(visiblePages, zoom, isFling)
     }
 
     private fun reset() {
+        // Stop any in progress fling when we open a new document
+        scroller.forceFinished(true)
         scrollTo(0, 0)
         zoom = DEFAULT_INIT_ZOOM
         pageManager = null
@@ -576,12 +605,18 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
 
     /** React to a change in visible pages (load new pages and clean up old ones) */
     private fun onVisiblePagesChanged() {
-        pageManager?.maybeUpdateBitmaps(visiblePages, zoom)
+        pageManager?.maybeUpdatePageState(visiblePages, zoom, isFling)
     }
 
     /** React to a page's dimensions being made available */
     private fun onPageDimensionsReceived(pageNum: Int, size: Point) {
-        pageManager?.onPageSizeReceived(pageNum, size, visiblePages.contains(pageNum), zoom)
+        pageManager?.onPageSizeReceived(
+            pageNum,
+            size,
+            visiblePages.contains(pageNum),
+            zoom,
+            isFling
+        )
         // Learning the dimensions of a page can change our understanding of the content that's in
         // the viewport
         pageLayoutManager?.onViewportChanged(scrollY, height, zoom)
@@ -676,7 +711,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
         return toContentCoord(viewY, zoom, scrollY)
     }
 
-    private fun toViewCoord(contentCoord: Float, zoom: Float, scroll: Int): Float {
+    internal fun toViewCoord(contentCoord: Float, zoom: Float, scroll: Int): Float {
         return (contentCoord * zoom) - scroll
     }
 
@@ -694,9 +729,8 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
     private val contentHeight: Int
         get() = pageLayoutManager?.paginationModel?.totalEstimatedHeight ?: 0
 
-    internal inner class ZoomScrollGestureHandler : GestureTracker.GestureHandler() {
-        internal var scrollInProgress = false
-        internal var scaleInProgress = false
+    /** Adjusts the position of [PdfView] in response to gestures detected by [GestureTracker] */
+    private inner class ZoomScrollGestureHandler : GestureTracker.GestureHandler() {
 
         /**
          * The multiplier to convert from a scale gesture's delta span, in pixels, to scale factor.
@@ -713,7 +747,6 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
          */
         private val linearScaleSpanMultiplier: Float =
             2f / maxOf(resources.displayMetrics.heightPixels, resources.displayMetrics.widthPixels)
-
         /** The maximum scroll distance used to determine if the direction is vertical. */
         private val maxScrollWindow =
             (resources.displayMetrics.density * MAX_SCROLL_WINDOW_DP).toInt()
@@ -735,13 +768,17 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
             // No need for accuracy of correct hypotenuse calculation
             get() = abs(totalX) + abs(totalY)
 
+        override fun onGestureStart() {
+            // Stop any in-progress fling when a new gesture begins
+            scroller.forceFinished(true)
+        }
+
         override fun onScroll(
             e1: MotionEvent?,
             e2: MotionEvent,
             distanceX: Float,
             distanceY: Float,
         ): Boolean {
-            scrollInProgress = true
             var dx = Math.round(distanceX)
             val dy = Math.round(distanceY)
 
@@ -783,17 +820,62 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
             velocityX: Float,
             velocityY: Float
         ): Boolean {
-            return super.onFling(e1, e2, velocityX, velocityY)
-            // TODO(b/376136621) Animate scroll position during a fling
+            // Assume a fling in a roughly vertical direction was meant to be exactly vertical.
+            val myVelocityX =
+                if (velocityY / velocityX > SCROLL_CORRECTION_RATIO) {
+                    0
+                } else {
+                    velocityX
+                }
+
+            isFling = true
+            scroller.fling(
+                scrollX,
+                scrollY,
+                -myVelocityX.toInt(),
+                -velocityY.toInt(),
+                /* minX= */ minVerticalScrollPosition,
+                computeHorizontalScrollRange(),
+                minVerticalScrollPosition,
+                computeVerticalScrollRange(),
+            )
+
+            postInvalidateOnAnimation() // Triggers computeScroll()
+            return true
         }
 
         override fun onDoubleTap(e: MotionEvent): Boolean {
-            return super.onDoubleTap(e)
-            // TODO(b/376136331) Toggle between fit-to-page and zoomed-in on double tap gestures
+
+            val currentZoom = zoom
+
+            val newZoom =
+                ZoomUtils.calculateZoomForDoubleTap(
+                    viewportWidth,
+                    viewportHeight,
+                    contentWidth,
+                    currentZoom,
+                    minZoom,
+                    maxZoom,
+                )
+            if (newZoom == 0f) {
+                // viewport not initialized yet maybe?
+                return false
+            }
+
+            ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 200 // Slightly shorter duration for snappier feel
+                addUpdateListener { animator ->
+                    val animatedValue = animator.animatedValue as Float
+                    val value = currentZoom + (newZoom - currentZoom) * animatedValue
+                    zoomTo(value, e.x, e.y)
+                }
+                start()
+            }
+
+            return true
         }
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {
-            scaleInProgress = true
             val rawScaleFactor = detector.scaleFactor
             val deltaSpan = abs(detector.currentSpan - detector.previousSpan)
             val scaleDelta = deltaSpan * linearScaleSpanMultiplier
@@ -805,21 +887,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
         }
 
         override fun onGestureEnd(gesture: GestureTracker.Gesture?) {
-            when (gesture) {
-                GestureTracker.Gesture.ZOOM -> {
-                    scaleInProgress = false
-                    onZoomChanged()
-                }
-                GestureTracker.Gesture.DRAG,
-                GestureTracker.Gesture.DRAG_Y,
-                GestureTracker.Gesture.DRAG_X -> {
-                    scrollInProgress = false
-                    onZoomChanged()
-                }
-                else -> {
-                    /* no-op */
-                }
-            }
+            if (gesture == GestureTracker.Gesture.ZOOM) onStableZoom()
             totalX = 0f
             totalY = 0f
             straightenCurrentVerticalScroll = true
@@ -867,7 +935,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
                                     gotoLink.destination.yCoordinate
                                 )
                         )
-                    gotoPoint(destination)
+                    scrollToPosition(destination)
                     return true
                 }
             }
@@ -880,9 +948,10 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
         ): Boolean {
             links.externalLinks.forEach { externalLink ->
                 if (externalLink.bounds.any { it.contains(pdfCoordinates.x, pdfCoordinates.y) }) {
-                    linkClickListener?.onLinkClicked(externalLink.uri)
+                    var uri = externalLink.uri
+                    linkClickListener?.onLinkClicked(uri)
                         ?: run {
-                            val intent = Intent(Intent.ACTION_VIEW, externalLink.uri)
+                            val intent = Intent(Intent.ACTION_VIEW, uri)
                             context.startActivity(intent)
                         }
                     return true
@@ -895,7 +964,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyle: Int = 0) :
     public companion object {
         public const val DEFAULT_INIT_ZOOM: Float = 1.0f
         public const val DEFAULT_MAX_ZOOM: Float = 25.0f
-        public const val DEFAULT_MIN_ZOOM: Float = 0.1f
+        public const val DEFAULT_MIN_ZOOM: Float = 0.5f
 
         /** The ratio of vertical to horizontal scroll that is assumed to be vertical only */
         private const val SCROLL_CORRECTION_RATIO = 1.5f

@@ -26,13 +26,17 @@ import androidx.wear.protolayout.types.LayoutColor
  * @param content the content color for the card.
  * @param time the color used for time for the card.
  * @param label the color used for label for the card.
+ * @param secondaryIcon the color used for icon in the data card type.
+ * @param secondaryText the color used for secondary label for the data card type.
  */
 public class CardColors(
     public val background: LayoutColor,
     public val title: LayoutColor,
     public val content: LayoutColor,
     public val time: LayoutColor = content,
-    public val label: LayoutColor = title
+    public val label: LayoutColor = title,
+    public val secondaryIcon: LayoutColor = title,
+    public val secondaryText: LayoutColor = time,
 )
 
 public object CardDefaults {
@@ -60,7 +64,8 @@ public object CardDefaults {
         CardColors(
             background = theme.colorScheme.surfaceContainer,
             title = theme.colorScheme.onSurface,
-            content = theme.colorScheme.onSurfaceVariant
+            content = theme.colorScheme.onSurfaceVariant,
+            secondaryIcon = theme.colorScheme.primary
         )
 
     /**

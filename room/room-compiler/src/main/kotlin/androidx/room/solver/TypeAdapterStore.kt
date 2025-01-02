@@ -39,9 +39,9 @@ import androidx.room.ext.isUUID
 import androidx.room.parser.ParsedQuery
 import androidx.room.parser.SQLTypeAffinity
 import androidx.room.processor.Context
+import androidx.room.processor.DataClassProcessor
 import androidx.room.processor.EntityProcessor
 import androidx.room.processor.FieldProcessor
-import androidx.room.processor.PojoProcessor
 import androidx.room.processor.ProcessorErrors
 import androidx.room.processor.ProcessorErrors.DO_NOT_USE_GENERIC_IMMUTABLE_MULTIMAP
 import androidx.room.processor.ProcessorErrors.invalidQueryForSingleColumnArray
@@ -69,6 +69,7 @@ import androidx.room.solver.query.parameter.BasicQueryParameterAdapter
 import androidx.room.solver.query.parameter.CollectionQueryParameterAdapter
 import androidx.room.solver.query.parameter.QueryParameterAdapter
 import androidx.room.solver.query.result.ArrayQueryResultAdapter
+import androidx.room.solver.query.result.DataClassRowAdapter
 import androidx.room.solver.query.result.EntityRowAdapter
 import androidx.room.solver.query.result.GuavaImmutableMultimapQueryResultAdapter
 import androidx.room.solver.query.result.GuavaOptionalQueryResultAdapter
@@ -83,7 +84,6 @@ import androidx.room.solver.query.result.MultimapQueryResultAdapter.Companion.va
 import androidx.room.solver.query.result.MultimapQueryResultAdapter.Companion.validateMapValueTypeArg
 import androidx.room.solver.query.result.MultimapQueryResultAdapter.MapType.Companion.isSparseArray
 import androidx.room.solver.query.result.OptionalQueryResultAdapter
-import androidx.room.solver.query.result.PojoRowAdapter
 import androidx.room.solver.query.result.QueryResultAdapter
 import androidx.room.solver.query.result.QueryResultBinder
 import androidx.room.solver.query.result.RowAdapter
@@ -900,7 +900,7 @@ private constructor(
 
     /**
      * Find a converter from statement to the given type mirror. If there is information about the
-     * query result, we try to use it to accept *any* POJO.
+     * query result, we try to use it to accept *any* data class.
      */
     fun findRowAdapter(
         typeMirror: XType,
@@ -921,21 +921,21 @@ private constructor(
 
             val (rowAdapter, rowAdapterLogs) =
                 if (resultInfo != null && query.errors.isEmpty() && resultInfo.error == null) {
-                    // if result info is not null, first try a pojo row adapter
+                    // if result info is not null, first try a data class row adapter
                     context.collectLogs { subContext ->
-                        val pojo =
-                            PojoProcessor.createFor(
+                        val dataClass =
+                            DataClassProcessor.createFor(
                                     context = subContext,
                                     element = typeElement,
                                     bindingScope = FieldProcessor.BindingScope.READ_FROM_STMT,
                                     parent = null
                                 )
                                 .process()
-                        PojoRowAdapter(
+                        DataClassRowAdapter(
                             context = subContext,
                             info = resultInfo,
                             query = query,
-                            pojo = pojo,
+                            dataClass = dataClass,
                             out = typeMirror
                         )
                     }
@@ -983,7 +983,7 @@ private constructor(
                 return rowAdapter
             }
 
-            // use pojo adapter as a last resort.
+            // use data class adapter as a last resort.
             // this happens when @RawQuery or @SkipVerification is used.
             if (
                 query.resultInfo == null &&
@@ -991,19 +991,19 @@ private constructor(
                     typeMirror.isNotVoidObject() &&
                     typeMirror.isNotKotlinUnit()
             ) {
-                val pojo =
-                    PojoProcessor.createFor(
+                val dataClass =
+                    DataClassProcessor.createFor(
                             context = context,
                             element = typeElement,
                             bindingScope = FieldProcessor.BindingScope.READ_FROM_STMT,
                             parent = null
                         )
                         .process()
-                return PojoRowAdapter(
+                return DataClassRowAdapter(
                     context = context,
                     info = null,
                     query = query,
-                    pojo = pojo,
+                    dataClass = dataClass,
                     out = typeMirror
                 )
             }

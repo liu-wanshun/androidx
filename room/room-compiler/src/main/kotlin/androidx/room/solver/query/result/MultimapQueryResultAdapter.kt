@@ -29,9 +29,9 @@ import androidx.room.ext.implementsEqualsAndHashcode
 import androidx.room.parser.ParsedQuery
 import androidx.room.processor.Context
 import androidx.room.processor.ProcessorErrors
+import androidx.room.processor.ProcessorErrors.AmbiguousColumnLocation.DATA_CLASS
 import androidx.room.processor.ProcessorErrors.AmbiguousColumnLocation.ENTITY
 import androidx.room.processor.ProcessorErrors.AmbiguousColumnLocation.MAP_INFO
-import androidx.room.processor.ProcessorErrors.AmbiguousColumnLocation.POJO
 import androidx.room.solver.types.StatementValueReader
 import androidx.room.verifier.ColumnInfo
 import androidx.room.vo.ColumnIndexVar
@@ -86,7 +86,8 @@ abstract class MultimapQueryResultAdapter(
                         when (it) {
                             is SingleNamedColumnRowAdapter.SingleNamedColumnRowMapping ->
                                 MAP_INFO to null
-                            is PojoRowAdapter.PojoMapping -> POJO to it.pojo.typeName
+                            is DataClassRowAdapter.DataClassMapping ->
+                                DATA_CLASS to it.dataClass.typeName
                             is EntityRowAdapter.EntityMapping -> ENTITY to it.entity.typeName
                             else -> error("Unknown mapping type: $it")
                         }

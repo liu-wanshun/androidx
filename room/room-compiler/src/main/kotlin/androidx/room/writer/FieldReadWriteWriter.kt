@@ -26,10 +26,10 @@ import androidx.room.ext.defaultValue
 import androidx.room.solver.CodeGenScope
 import androidx.room.vo.CallType
 import androidx.room.vo.Constructor
+import androidx.room.vo.DataClass
 import androidx.room.vo.EmbeddedField
 import androidx.room.vo.Field
 import androidx.room.vo.FieldWithIndex
-import androidx.room.vo.Pojo
 import androidx.room.vo.RelationCollector
 import java.util.Locale
 
@@ -181,7 +181,7 @@ class FieldReadWriteWriter(fieldWithIndex: FieldWithIndex) {
         /** Reads the row into the given variable. It does not declare it but constructs it. */
         fun readFromStatement(
             outVar: String,
-            outPojo: Pojo,
+            outDataClass: DataClass,
             stmtVar: String,
             fieldsWithIndices: List<FieldWithIndex>,
             scope: CodeGenScope,
@@ -220,7 +220,7 @@ class FieldReadWriteWriter(fieldWithIndex: FieldWithIndex) {
                     if (fieldParent != null) {
                         construct(
                             outVar = node.varName,
-                            constructor = fieldParent.pojo.constructor,
+                            constructor = fieldParent.dataClass.constructor,
                             typeName = fieldParent.field.typeName,
                             localEmbeddeds = node.subNodes,
                             localRelations = relationFields,
@@ -230,8 +230,8 @@ class FieldReadWriteWriter(fieldWithIndex: FieldWithIndex) {
                     } else {
                         construct(
                             outVar = node.varName,
-                            constructor = outPojo.constructor,
-                            typeName = outPojo.typeName,
+                            constructor = outDataClass.constructor,
+                            typeName = outDataClass.typeName,
                             localEmbeddeds = node.subNodes,
                             localRelations = relationFields,
                             localVariableNames = constructorFields,

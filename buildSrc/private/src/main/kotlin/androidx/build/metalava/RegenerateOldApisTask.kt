@@ -172,6 +172,7 @@ constructor(private val workerExecutor: WorkerExecutor) : DefaultTask() {
             project.logger.lifecycle("Regenerating $mavenId")
             generateApi(
                 project.getMetalavaClasspath(),
+                null,
                 inputs,
                 outputApiLocation,
                 ApiLintMode.Skip,

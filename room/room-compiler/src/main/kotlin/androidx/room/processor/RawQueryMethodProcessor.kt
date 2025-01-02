@@ -126,7 +126,7 @@ class RawQueryMethodProcessor(
                     arrayListOf(entity.tableName)
                 } else {
                     val pojo =
-                        PojoProcessor.createFor(
+                        DataClassProcessor.createFor(
                                 context = context,
                                 element = it,
                                 bindingScope = FieldProcessor.BindingScope.READ_FROM_STMT,

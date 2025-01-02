@@ -4539,6 +4539,404 @@ public abstract class AppSearchSessionCtsTestBase {
     }
 
     @Test
+    public void testQuery_wildcardProjectionWithExistentType() throws Exception {
+        // Schema registration
+        mDb1.setSchemaAsync(
+                new SetSchemaRequest.Builder()
+                        .addSchemas(AppSearchEmail.SCHEMA)
+                        .build()).get();
+
+        // Index two documents
+        AppSearchEmail email1 =
+                new AppSearchEmail.Builder("namespace", "id1")
+                        .setCreationTimestampMillis(1000)
+                        .setFrom("from@example.com")
+                        .setTo("to1@example.com", "to2@example.com")
+                        .setSubject("testPut example")
+                        .setBody("This is the body of the testPut email")
+                        .build();
+        AppSearchEmail email2 =
+                new AppSearchEmail.Builder("namespace", "id2")
+                        .setCreationTimestampMillis(1000)
+                        .setFrom("from@example.com")
+                        .setTo("to1@example.com", "to2@example.com")
+                        .setSubject("testPut example")
+                        .setBody("This is the body of the testPut email")
+                        .build();
+        checkIsBatchResultSuccess(mDb1.putAsync(
+                new PutDocumentsRequest.Builder()
+                        .addGenericDocuments(email1, email2).build()));
+
+        // Get with type property paths {"Email", ["subject", "to"]}
+        // The SCHEMA_TYPE projection takes preference over PROJECTION_SCHEMA_TYPE_WILDCARD.
+        GetByDocumentIdRequest request = new GetByDocumentIdRequest.Builder("namespace")
+                .addIds("id1", "id2")
+                .addProjection(
+                        GetByDocumentIdRequest.PROJECTION_SCHEMA_TYPE_WILDCARD,
+                        ImmutableList.of("subject", "to"))
+                .addProjection(AppSearchEmail.SCHEMA_TYPE, ImmutableList.of("from"))
+
+                .build();
+        List<GenericDocument> outDocuments = doGet(mDb1, request);
+
+        // The two email documents should have been returned with "from" properties.
+        AppSearchEmail expected1 =
+                new AppSearchEmail.Builder("namespace", "id2")
+                        .setCreationTimestampMillis(1000)
+                        .setFrom("from@example.com")
+                        .build();
+        AppSearchEmail expected2 =
+                new AppSearchEmail.Builder("namespace", "id1")
+                        .setCreationTimestampMillis(1000)
+                        .setFrom("from@example.com")
+                        .build();
+        assertThat(outDocuments).containsExactly(expected1, expected2);
+    }
+
+    @Test
+    public void testQuery_projectionWithMultiplePages() throws Exception {
+        // Schema registration
+        mDb1.setSchemaAsync(
+                new SetSchemaRequest.Builder()
+                    .addSchemas(AppSearchEmail.SCHEMA)
+                    .build())
+                .get();
+        PutDocumentsRequest.Builder putDocumentsRequestBuilder = new PutDocumentsRequest.Builder();
+
+        // Index 10 documents.
+        for (int i = 0; i < 10; i++) {
+            AppSearchEmail email =
+                    new AppSearchEmail.Builder("namespace", "id" + i)
+                        .setFrom("from@example.com")
+                        .setTo("to1@example.com", "to2@example.com")
+                        .setSubject("testPut example")
+                        .setBody("This is the body of the testPut email " + i)
+                        .build();
+            putDocumentsRequestBuilder.addGenericDocuments(email);
+        }
+        checkIsBatchResultSuccess(mDb1.putAsync(putDocumentsRequestBuilder.build()));
+
+        // Query with type property paths {"Email", ["body", "to"]}
+        // Set number of results per page to 4.
+        SearchResults searchResults =
+                mDb1.search(
+                    "body",
+                    new SearchSpec.Builder()
+                        .setTermMatch(SearchSpec.TERM_MATCH_EXACT_ONLY)
+                        .setResultCountPerPage(4)
+                        .addProjection(
+                            AppSearchEmail.SCHEMA_TYPE,
+                            ImmutableList.of("subject", "body"))
+                        .build());
+
+        // Manually populate documents instead of calling convertSearchResultsToDocuments.
+        // This is so that the page count can be verified.
+        List<GenericDocument> documents = new ArrayList<>();
+        List<SearchResult> results;
+        int pageCount = 0;
+
+        // Keep loading pages until empty.
+        do {
+            results = searchResults.getNextPageAsync().get();
+            ++pageCount;
+            for (SearchResult result : results) {
+                documents.add(result.getGenericDocument());
+            }
+        } while (results.size() > 0);
+
+        assertThat(pageCount).isEqualTo(4); // 3 (upper(10/4)) + 1 (final empty page)
+        assertThat(documents).hasSize(10);
+
+        for (GenericDocument document : documents) {
+            // Assert that the document has the projected properties.
+            assertThat(document.getPropertyString("subject")).isEqualTo("testPut example");
+            assertThat(document.getPropertyString("body")).contains("This is the body");
+
+            // Assert that a non-projected property is null.
+            assertThat(document.getPropertyString("to")).isNull();
+        }
+    }
+
+    @Test
+    public void testQuery_projectionWithNestedDocumentsAndMultiplePages() throws Exception {
+        // Schema registration
+        mDb1.setSchemaAsync(
+                new SetSchemaRequest.Builder()
+                    .addSchemas(AppSearchEmail.SCHEMA)
+                    .addSchemas(
+                        new AppSearchSchema.Builder("yesNestedIndex")
+                            .addProperty(
+                                new AppSearchSchema.DocumentPropertyConfig.Builder(
+                                    "prop", AppSearchEmail.SCHEMA_TYPE)
+                                    .setShouldIndexNestedProperties(true)
+                                    .build())
+                            .build())
+                    .build())
+                .get();
+
+        // Index 13 documents.
+        PutDocumentsRequest.Builder putDocumentsRequestBuilder = new PutDocumentsRequest.Builder();
+        for (int i = 0; i < 13; i++) {
+            AppSearchEmail email =
+                    new AppSearchEmail.Builder("namespace", "id" + i)
+                        .setCreationTimestampMillis(1000)
+                        .setFrom("from@example.com")
+                        .setTo("to1@example.com", "to2@example.com")
+                        .setSubject("testPut example " + i)
+                        .setBody("This is the body of the testPut email " + i)
+                        .build();
+
+            GenericDocument nestedDocument =
+                    new GenericDocument.Builder<>("namespace", "id" + i, "yesNestedIndex")
+                        .setPropertyDocument("prop", email)
+                        .build();
+
+            putDocumentsRequestBuilder.addGenericDocuments(nestedDocument);
+        }
+        checkIsBatchResultSuccess(mDb1.putAsync(putDocumentsRequestBuilder.build()));
+
+        // Query with projection on nested properties "prop.subject" and "prop.body".
+        // Set number of results per page to 5.
+        SearchResults searchResults =
+                mDb1.search(
+                    "body",
+                    new SearchSpec.Builder()
+                        .setTermMatch(SearchSpec.TERM_MATCH_EXACT_ONLY)
+                        .setResultCountPerPage(5)
+                        .addProjection(
+                            "yesNestedIndex",
+                            ImmutableList.of("prop.subject", "prop.body"))
+                        .build());
+
+        // Manually populate documents instead of calling convertSearchResultsToDocuments.
+        // This is so that the page count can be verified.
+        List<GenericDocument> documents = new ArrayList<>();
+        List<SearchResult> results;
+        int pageCount = 0;
+
+        // Keep loading pages until empty.
+        do {
+            results = searchResults.getNextPageAsync().get();
+            ++pageCount;
+            for (SearchResult result : results) {
+                documents.add(result.getGenericDocument());
+            }
+        } while (results.size() > 0);
+
+        assertThat(pageCount).isEqualTo(4); // 3 (upper(13/5)) + 1 (final empty page)
+        assertThat(documents).hasSize(13);
+
+        for (GenericDocument document : documents) {
+            // Assert that the document has the projected nested properties.
+            assertThat(document.getPropertyString("prop.subject")).contains("testPut example");
+            assertThat(document.getPropertyString("prop.body")).contains("This is the body");
+
+            // Assert that a non-projected nested property is null.
+            assertThat(document.getPropertyString("prop.to")).isNull();
+        }
+    }
+
+    @Test
+    public void testQuery_projectionWithMultipleNestedDocumentsAndMultiplePages() throws Exception {
+        // Schema registration
+        mDb1.setSchemaAsync(
+                new SetSchemaRequest.Builder()
+                    .addSchemas(AppSearchEmail.SCHEMA)
+                    .addSchemas(
+                        new AppSearchSchema.Builder("yesOuterNestedIndex")
+                            .addProperty(
+                                new AppSearchSchema.DocumentPropertyConfig.Builder(
+                                    "innerNestedProp",
+                                    "yesInnerNestedIndex")
+                                    .setShouldIndexNestedProperties(true)
+                                    .build())
+                            .build())
+                    .addSchemas(
+                        new AppSearchSchema.Builder("yesInnerNestedIndex")
+                            .addProperty(
+                                new AppSearchSchema.DocumentPropertyConfig.Builder(
+                                    "outerNestedProp",
+                                    AppSearchEmail.SCHEMA_TYPE)
+                                    .setShouldIndexNestedProperties(true)
+                                    .build())
+                            .build())
+                    .build())
+                .get();
+
+        // Index 28 documents
+        PutDocumentsRequest.Builder putDocumentsRequestBuilder = new PutDocumentsRequest.Builder();
+        for (int i = 0; i < 28; i++) {
+            AppSearchEmail email =
+                    new AppSearchEmail.Builder("namespace", "id" + i)
+                        .setCreationTimestampMillis(1000)
+                        .setFrom("from@example.com")
+                        .setTo("to1@example.com", "to2@example.com")
+                        .setSubject("testPut example " + i)
+                        .setBody("This is the body of the testPut email " + i)
+                        .build();
+
+            GenericDocument innerNestedDocument =
+                    new GenericDocument.Builder<>("namespace", "id" + i, "yesInnerNestedIndex")
+                        .setPropertyDocument("outerNestedProp", email)
+                        .build();
+
+            GenericDocument outerNestedDocument =
+                    new GenericDocument.Builder<>("namespace", "id" + i, "yesOuterNestedIndex")
+                        .setPropertyDocument("innerNestedProp", innerNestedDocument)
+                        .build();
+
+            putDocumentsRequestBuilder.addGenericDocuments(outerNestedDocument);
+        }
+        checkIsBatchResultSuccess(mDb1.putAsync(putDocumentsRequestBuilder.build()));
+
+        // Query with projection on nested properties
+        // "innerNestedProp.outerNestedProp.subject" and "innerNestedProp.outerNestedProp.body".
+        // Set number of results per page to 7.
+        SearchResults searchResults =
+                mDb1.search(
+                    "body",
+                    new SearchSpec.Builder()
+                        .setTermMatch(SearchSpec.TERM_MATCH_EXACT_ONLY)
+                        .setResultCountPerPage(7)
+                        .addProjection(
+                            "yesOuterNestedIndex",
+                            ImmutableList.of(
+                                "innerNestedProp.outerNestedProp.subject",
+                                "innerNestedProp.outerNestedProp.body"))
+                        .build());
+
+        // Manually populate documents instead of calling convertSearchResultsToDocuments.
+        // This is so that the page count can be verified.
+        List<GenericDocument> documents = new ArrayList<>();
+        List<SearchResult> results;
+        int pageCount = 0;
+
+        // Keep loading pages until empty.
+        do {
+            results = searchResults.getNextPageAsync().get();
+            ++pageCount;
+            for (SearchResult result : results) {
+                documents.add(result.getGenericDocument());
+            }
+        } while (results.size() > 0);
+
+        assertThat(pageCount).isEqualTo(5); // 4 (upper(28/7)) + 1 (final empty page)
+        assertThat(documents).hasSize(28);
+
+        for (GenericDocument document : documents) {
+            // Assert that the document has the projected nested properties.
+            assertThat(document.getPropertyString("innerNestedProp.outerNestedProp.subject"))
+                    .contains("testPut example");
+            assertThat(document.getPropertyString("innerNestedProp.outerNestedProp.body"))
+                    .contains("This is the body");
+
+            // Assert that a non-projected nested property is null.
+            assertThat(document.getPropertyString("innerNestedProp.outerNestedProp.to")).isNull();
+        }
+    }
+
+    @Test
+    public void testQuery_matchInfoProjection() throws Exception {
+        // Schema registration
+        AppSearchSchema genericSchema = new AppSearchSchema.Builder("Generic")
+                .addProperty(new StringPropertyConfig.Builder("subject")
+                .setCardinality(PropertyConfig.CARDINALITY_OPTIONAL)
+                .setTokenizerType(StringPropertyConfig.TOKENIZER_TYPE_PLAIN)
+                .setIndexingType(StringPropertyConfig.INDEXING_TYPE_PREFIXES)
+                .build())
+                .build();
+        mDb1.setSchemaAsync(
+            new SetSchemaRequest.Builder().addSchemas(genericSchema).build()).get();
+
+        // Index a document
+        GenericDocument document =
+                new GenericDocument.Builder<>("namespace", "id", "Generic")
+                    .setPropertyString("subject", "A commonly used fake word is foo. "
+                            + "Another nonsense word that’s used a lot is bar")
+                    .build();
+        checkIsBatchResultSuccess(mDb1.putAsync(
+            new PutDocumentsRequest.Builder().addGenericDocuments(document).build()));
+
+        // Query with type property paths {"Generic", ["subject"]}
+        SearchResults searchResults = mDb1.search("fo",
+            new SearchSpec.Builder()
+                .addFilterSchemas("Generic")
+                .setSnippetCount(1)
+                .setSnippetCountPerProperty(1)
+                .setMaxSnippetSize(10)
+                .setTermMatch(SearchSpec.TERM_MATCH_PREFIX)
+                .addProjection("Generic", ImmutableList.of("subject"))
+                .build());
+        List<SearchResult> results = searchResults.getNextPageAsync().get();
+        assertThat(results).hasSize(1);
+
+        List<SearchResult.MatchInfo> matchInfos = results.get(0).getMatchInfos();
+
+        assertThat(matchInfos).isNotNull();
+        assertThat(matchInfos).hasSize(1);
+        SearchResult.MatchInfo matchInfo = matchInfos.get(0);
+        assertThat(matchInfo.getPropertyPath()).isEqualTo("subject");
+        assertThat(matchInfo.getFullText()).isEqualTo("A commonly used fake word is foo. "
+                + "Another nonsense word that’s used a lot is bar");
+        assertThat(matchInfo.getExactMatchRange()).isEqualTo(
+            new SearchResult.MatchRange(/*start=*/29,  /*end=*/32));
+        assertThat(matchInfo.getExactMatch().toString()).isEqualTo("foo");
+        assertThat(matchInfo.getSnippetRange()).isEqualTo(
+            new SearchResult.MatchRange(/*start=*/26,  /*end=*/33));
+        assertThat(matchInfo.getSnippet().toString()).isEqualTo("is foo.");
+        assertThat(matchInfo.getPropertyPath()).isEqualTo("subject");
+
+        if (!mDb1.getFeatures().isFeatureSupported(
+                Features.SEARCH_RESULT_MATCH_INFO_SUBMATCH)) {
+            assertThrows(UnsupportedOperationException.class, matchInfo::getSubmatchRange);
+            assertThrows(UnsupportedOperationException.class, matchInfo::getSubmatch);
+        } else {
+            assertThat(matchInfo.getSubmatchRange()).isEqualTo(
+                new SearchResult.MatchRange(/*start=*/29,  /*end=*/31));
+            assertThat(matchInfo.getSubmatch().toString()).isEqualTo("fo");
+        }
+    }
+
+    @Test
+    public void testQuery_matchInfoProjectionEmpty() throws Exception {
+        // Schema registration
+        AppSearchSchema genericSchema = new AppSearchSchema.Builder("Generic")
+                .addProperty(new StringPropertyConfig.Builder("subject")
+                .setCardinality(PropertyConfig.CARDINALITY_OPTIONAL)
+                .setTokenizerType(StringPropertyConfig.TOKENIZER_TYPE_PLAIN)
+                .setIndexingType(StringPropertyConfig.INDEXING_TYPE_PREFIXES)
+                .build())
+                .build();
+        mDb1.setSchemaAsync(
+            new SetSchemaRequest.Builder().addSchemas(genericSchema).build()).get();
+
+        // Index a document
+        GenericDocument document =
+                new GenericDocument.Builder<>("namespace", "id", "Generic")
+                    .setPropertyString("subject", "A commonly used fake word is foo. "
+                            + "Another nonsense word that’s used a lot is bar")
+                    .build();
+        checkIsBatchResultSuccess(mDb1.putAsync(
+            new PutDocumentsRequest.Builder().addGenericDocuments(document).build()));
+
+        // Query with type property paths {"Generic", []}
+        SearchResults searchResults = mDb1.search("fo",
+            new SearchSpec.Builder()
+                .addFilterSchemas("Generic")
+                .setSnippetCount(1)
+                .setSnippetCountPerProperty(1)
+                .setMaxSnippetSize(10)
+                .setTermMatch(SearchSpec.TERM_MATCH_PREFIX)
+                .addProjection("Generic", Collections.emptyList())
+                .build());
+        List<SearchResult> results = searchResults.getNextPageAsync().get();
+        assertThat(results).hasSize(1);
+
+        List<SearchResult.MatchInfo> matchInfos = results.get(0).getMatchInfos();
+        assertThat(matchInfos).isEmpty();
+    }
+
+    @Test
     @RequiresFlagsEnabled(Flags.FLAG_ENABLE_SEARCH_SPEC_FILTER_DOCUMENT_IDS)
     public void testQuery_documentIdFilter() throws Exception {
         assumeTrue(mDb1.getFeatures().isFeatureSupported(
@@ -5167,10 +5565,10 @@ public abstract class AppSearchSessionCtsTestBase {
                 + "Another nonsense word that’s used a lot is bar");
         assertThat(matchInfo.getExactMatchRange()).isEqualTo(
                 new SearchResult.MatchRange(/*start=*/29,  /*end=*/32));
-        assertThat(matchInfo.getExactMatch()).isEqualTo("foo");
+        assertThat(matchInfo.getExactMatch().toString()).isEqualTo("foo");
         assertThat(matchInfo.getSnippetRange()).isEqualTo(
                 new SearchResult.MatchRange(/*start=*/26,  /*end=*/33));
-        assertThat(matchInfo.getSnippet()).isEqualTo("is foo.");
+        assertThat(matchInfo.getSnippet().toString()).isEqualTo("is foo.");
 
         if (!mDb1.getFeatures().isFeatureSupported(
                 Features.SEARCH_RESULT_MATCH_INFO_SUBMATCH)) {
@@ -5179,7 +5577,7 @@ public abstract class AppSearchSessionCtsTestBase {
         } else {
             assertThat(matchInfo.getSubmatchRange()).isEqualTo(
                     new SearchResult.MatchRange(/*start=*/29,  /*end=*/31));
-            assertThat(matchInfo.getSubmatch()).isEqualTo("fo");
+            assertThat(matchInfo.getSubmatch().toString()).isEqualTo("fo");
         }
     }
 

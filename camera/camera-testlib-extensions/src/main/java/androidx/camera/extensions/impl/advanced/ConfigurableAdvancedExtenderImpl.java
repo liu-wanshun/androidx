@@ -602,5 +602,11 @@ public class ConfigurableAdvancedExtenderImpl implements AdvancedExtenderImpl {
             return mLongDurationCapture ? new Pair<>(500L, 2000L) : new Pair<>(500L, 0L);
         }
     }
+
+    @Override
+    public @NonNull List<Pair<CameraCharacteristics.Key, Object>>
+    getAvailableCharacteristicsKeyValues() {
+        return Collections.emptyList();
+    }
 }
 

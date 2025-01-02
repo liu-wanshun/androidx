@@ -241,9 +241,9 @@ object ProcessorErrors {
             " occurring."
 
     val TRANSACTION_MISSING_ON_RELATION =
-        "The return value includes a POJO with a @Relation." +
+        "The return value includes a data class with a @Relation." +
             " It is usually desired to annotate this method with @Transaction to avoid" +
-            " possibility of inconsistent results between the POJO and its relations. See " +
+            " possibility of inconsistent results between the data class and its relations. See " +
             TRANSACTION_REFERENCE_DOCS +
             " for details."
 
@@ -337,37 +337,37 @@ object ProcessorErrors {
             .trim()
     }
 
-    fun pojoMissingNonNull(
-        pojoTypeName: String,
-        missingPojoFields: List<String>,
+    fun dataClassMissingNonNull(
+        dataClassTypeName: String,
+        missingDataClassFields: List<String>,
         allQueryColumns: List<String>
     ): String {
         return """
         The columns returned by the query does not have the fields
-        [${missingPojoFields.joinToString(",")}] in $pojoTypeName even though they are
+        [${missingDataClassFields.joinToString(",")}] in $dataClassTypeName even though they are
         annotated as non-null or primitive.
         Columns returned by the query: [${allQueryColumns.joinToString(",")}]
         """
             .trim()
     }
 
-    fun queryFieldPojoMismatch(
-        pojoTypeNames: List<String>,
+    fun queryFieldDataClassMismatch(
+        dataClassTypeNames: List<String>,
         unusedColumns: List<String>,
         allColumns: List<String>,
-        pojoUnusedFields: Map<String, List<Field>>,
+        dataClassUnusedFields: Map<String, List<Field>>,
     ): String {
         val unusedColumnsWarning =
             if (unusedColumns.isNotEmpty()) {
-                val pojoNames =
-                    if (pojoTypeNames.size > 1) {
-                        "any of [${pojoTypeNames.joinToString(", ")}]"
+                val dataClassNames =
+                    if (dataClassTypeNames.size > 1) {
+                        "any of [${dataClassTypeNames.joinToString(", ")}]"
                     } else {
-                        pojoTypeNames.single().toString()
+                        dataClassTypeNames.single().toString()
                     }
                 """
                 The query returns some columns [${unusedColumns.joinToString(", ")}] which are not
-                used by $pojoNames. You can use @ColumnInfo annotation on the fields to specify
+                used by $dataClassNames. You can use @ColumnInfo annotation on the fields to specify
                 the mapping.
                 You can annotate the method with @RewriteQueriesToDropUnusedColumns to direct Room
                 to rewrite your query to avoid fetching unused columns.
@@ -377,9 +377,9 @@ object ProcessorErrors {
                 ""
             }
         val unusedFieldsWarning =
-            pojoUnusedFields.map { (pojoName, unusedFields) ->
+            dataClassUnusedFields.map { (dataClassName, unusedFields) ->
                 """
-                $pojoName has some fields
+                $dataClassName has some fields
                 [${unusedFields.joinToString(", ") { it.columnName }}] which are not returned by
                 the query. If they are not supposed to be read from the result, you can mark them
                 with @Ignore annotation.
@@ -419,9 +419,9 @@ object ProcessorErrors {
     }
 
     // TODO must print field paths.
-    val POJO_FIELD_HAS_DUPLICATE_COLUMN_NAME = "Field has non-unique column name."
+    val DATA_CLASS_FIELD_HAS_DUPLICATE_COLUMN_NAME = "Field has non-unique column name."
 
-    fun pojoDuplicateFieldNames(columnName: String, fieldPaths: List<String>): String {
+    fun dataClassDuplicateFieldNames(columnName: String, fieldPaths: List<String>): String {
         return "Multiple fields have the same columnName: $columnName." +
             " Field names: ${fieldPaths.joinToString(", ")}."
     }
@@ -563,10 +563,10 @@ object ProcessorErrors {
             .trim()
     }
 
-    val CANNOT_USE_MORE_THAN_ONE_POJO_FIELD_ANNOTATION =
+    val CANNOT_USE_MORE_THAN_ONE_DATA_CLASS_FIELD_ANNOTATION =
         "A field can be annotated with only" +
             " one of the following:" +
-            PojoProcessor.PROCESSED_ANNOTATIONS.joinToString(",") { it.java.simpleName }
+            DataClassProcessor.PROCESSED_ANNOTATIONS.joinToString(",") { it.java.simpleName }
 
     fun missingIgnoredColumns(missingIgnoredColumns: List<String>): String {
         return "Non-existent columns are specified to be ignored in ignoreColumns: " +
@@ -719,12 +719,12 @@ object ProcessorErrors {
             "androidx.room:room-paging-rxjava3:<version>"
 
     fun ambiguousConstructor(
-        pojo: String,
+        dataClass: String,
         paramName: String,
         matchingFields: List<String>
     ): String {
         return """
-            Ambiguous constructor. The parameter ($paramName) in $pojo matches multiple fields:
+            Ambiguous constructor. The parameter ($paramName) in $dataClass matches multiple fields:
             [${matchingFields.joinToString(",")}]. If you don't want to use this constructor,
             you can annotate it with @Ignore. If you want Room to use this constructor, you can
             rename the parameters to exactly match the field name to fix the ambiguity.
@@ -732,21 +732,21 @@ object ProcessorErrors {
             .trim()
     }
 
-    val MISSING_POJO_CONSTRUCTOR =
+    val MISSING_DATA_CLASS_CONSTRUCTOR =
         """
-            Entities and POJOs must have a usable public constructor. You can have an empty
+            Entities and data classes must have a usable public constructor. You can have an empty
             constructor or a constructor whose parameters match the fields (by name and type).
             """
             .trim()
 
-    val TOO_MANY_POJO_CONSTRUCTORS =
+    val TOO_MANY_DATA_CLASS_CONSTRUCTORS =
         """
             Room cannot pick a constructor since multiple constructors are suitable. Try to annotate
             unwanted constructors with @Ignore.
             """
             .trim()
 
-    val TOO_MANY_POJO_CONSTRUCTORS_CHOOSING_NO_ARG =
+    val TOO_MANY_DATA_CLASS_CONSTRUCTORS_CHOOSING_NO_ARG =
         """
             There are multiple good constructors and Room will pick the no-arg constructor.
             You can use the @Ignore annotation to eliminate unwanted constructors.
@@ -787,8 +787,8 @@ object ProcessorErrors {
     fun rawQueryBadEntity(typeName: String): String {
         return """
             observedEntities field in RawQuery must either reference a class that is annotated
-            with @Entity or it should reference a POJO that either contains @Embedded fields that
-            are annotated with @Entity or @Relation fields.
+            with @Entity or it should reference a data class that either contains @Embedded fields 
+            that are annotated with @Entity or @Relation fields.
             $typeName does not have these properties, did you mean another class?
             """
             .trim()
@@ -1185,13 +1185,14 @@ object ProcessorErrors {
                 AmbiguousColumnLocation.MAP_INFO -> {
                     "in the @MapInfo" to "update @MapInfo"
                 }
-                AmbiguousColumnLocation.POJO -> {
+                AmbiguousColumnLocation.DATA_CLASS -> {
                     checkNotNull(typeName)
                     "in the object '$typeName'" to "use @ColumnInfo"
                 }
                 AmbiguousColumnLocation.ENTITY -> {
                     checkNotNull(typeName)
-                    "in the entity '$typeName'" to "use a new data class / POJO with @ColumnInfo'"
+                    "in the entity '$typeName'" to
+                        "use a new data class / data class with " + "@ColumnInfo'"
                 }
             }
         return "The column '$columnName' $locationDesc is ambiguous and cannot be properly " +
@@ -1202,7 +1203,7 @@ object ProcessorErrors {
 
     enum class AmbiguousColumnLocation {
         MAP_INFO,
-        POJO,
+        DATA_CLASS,
         ENTITY,
     }
 

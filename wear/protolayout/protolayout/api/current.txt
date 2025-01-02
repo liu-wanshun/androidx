@@ -1481,6 +1481,15 @@ package androidx.wear.protolayout {
 
 }
 
+package androidx.wear.protolayout.layout {
+
+  public final class TextKt {
+    method public static androidx.wear.protolayout.LayoutElementBuilders.Text basicText(androidx.wear.protolayout.types.LayoutString text, optional androidx.wear.protolayout.LayoutElementBuilders.FontStyle? fontStyle, optional androidx.wear.protolayout.modifiers.LayoutModifier? modifier, optional int maxLines, optional int multilineAlignment, optional int overflow, optional @Dimension(unit=androidx.annotation.Dimension.Companion.SP) float lineHeight);
+    method public static androidx.wear.protolayout.LayoutElementBuilders.FontStyle fontStyle(optional @Dimension(unit=androidx.annotation.Dimension.Companion.SP) float size, optional boolean italic, optional boolean underline, optional androidx.wear.protolayout.types.LayoutColor? color, optional int weight, optional float letterSpacingEm, optional @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=300) java.util.List<java.lang.Float> additionalSizesSp, optional @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) java.util.List<? extends androidx.wear.protolayout.LayoutElementBuilders.FontSetting> settings, optional @androidx.wear.protolayout.expression.RequiresSchemaVersion(major=1, minor=400) java.util.List<java.lang.String> preferredFontFamilies);
+  }
+
+}
+
 package androidx.wear.protolayout.modifiers {
 
   public interface LayoutModifier {

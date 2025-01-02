@@ -313,8 +313,10 @@ public class FullWidthDetailsOverviewRowPresenter extends RowPresenter {
         /**
          * Constructor for the ViewHolder.
          *
-         * @param rootView The root View that this view holder will be attached
-         *        to.
+         * @param rootView         The root View that this view holder will be attached to.
+         * @param detailsPresenter The {@link Presenter} used to render the detailed description of
+         *                         the row.
+         * @param logoPresenter    The {@link Presenter} used to render the logo view.
          */
         public ViewHolder(View rootView, Presenter detailsPresenter,
                 DetailsOverviewLogoPresenter logoPresenter) {

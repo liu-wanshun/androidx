@@ -299,7 +299,8 @@ abstract class ImageAnalysisAbstractAnalyzer implements ImageReaderProxy.OnImage
                                         imageProxy.getImageInfo().getTimestamp(),
                                         mOutputImageRotationEnabled ? 0
                                                 : mRelativeRotation,
-                                        transformMatrix);
+                                        transformMatrix,
+                                        imageProxy.getImageInfo().getFlashState());
 
                                 ImageProxy outputSettableImageProxy = new SettableImageProxy(
                                         outputImageProxy, imageInfo);

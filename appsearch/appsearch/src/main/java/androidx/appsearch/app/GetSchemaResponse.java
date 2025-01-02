@@ -225,6 +225,9 @@ public final class GetSchemaResponse extends AbstractSafeParcelable {
      * <!--@exportToFramework:else()-->
      */
     // TODO(b/237388235): add enterprise permissions to javadocs after they're unhidden
+    // Annotation is here to suppress lint error. Lint error is erroneous since the method does not
+    // require the caller to hold any permission for the method to function.
+    @SuppressLint("RequiresPermission")
     @RequiresFeature(
             enforcement = "androidx.appsearch.app.Features#isFeatureSupported",
             name = Features.ADD_PERMISSIONS_AND_GET_VISIBILITY)

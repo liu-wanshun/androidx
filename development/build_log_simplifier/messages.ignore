@@ -345,7 +345,7 @@ receiver\#androidx\.profileinstaller\.ProfileInstallReceiver@android:enabled was
 Critical dependency: Accessing import\.meta directly is unsupported.*
 # Comes up after test execution or after Karma attempts to kill the browser and it takes too long
 # Can be ignored as the test is complete by the time the message is printed
-ChromeHeadless was not killed in.*
+ChromeHeadless was not killed.*
 For more details, see: https://kotl\.in/gradle/internal\-compiler\-symbols
 # https://youtrack.jetbrains.com/issue/KT-72471/
 .*SubclassOptInRequired\.<init>.*
@@ -357,7 +357,6 @@ For more details, see: https://kotl\.in/gradle/internal\-compiler\-symbols
 # https://github.com/kythe/kythe/issues/6145
 .*com.google\.devtools\.kythe\.extractors\.java\.JavaCompilationUnitExtractor.*
 ^WARNING: Empty java source file.*
-# b/359397747 Add PrivacySandboxService to mediatee-sdk-provider
+# b/359449191
 > Transform sdk\-interface\-descriptors\.jar \(project :privacysandbox:ui:integration\-tests:testsdkproviderwrapper\) with ExtractCompileSdkShimTransform
-> Task :privacysandbox:ui:integration\-tests:mediateesdkproviderwrapper:buildModuleForBundle
-> Task :privacysandbox:ui:integration\-tests:mediateesdkproviderwrapper:bundle
+> Transform sdk\-interface\-descriptors\.jar \(project :privacysandbox:ui:integration\-tests:mediateesdkproviderwrapper\) with ExtractCompileSdkShimTransform

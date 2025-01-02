@@ -55,7 +55,7 @@
     <string name="desc_goto_link">Go to page <xliff:g example="12" id="page_number">%1$d</xliff:g></string>
 
     <!-- Content description for a page of a paginated document, eg "page 3". [CHAR LIMIT=50] -->
-    <string name="desc_page">page <xliff:g example="3" id="page">%1$d</xliff:g></string>
+    <string name="desc_page">Page <xliff:g example="3" id="page">%1$d</xliff:g></string>
 
     <!-- Content description for an empty page of a paginated document -->
     <string name="desc_empty_page">Empty page</string>

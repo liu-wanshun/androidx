@@ -488,6 +488,20 @@ public final class SearchResult extends AbstractSafeParcelable {
         }
 
         /**
+         * Clears the {@link MatchInfo}s.
+         *
+         * @exportToFramework:hide
+         */
+        @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
+        @CanIgnoreReturnValue
+        public @NonNull Builder clearMatchInfos() {
+            resetIfBuilt();
+            mMatchInfos.clear();
+            return this;
+        }
+
+
+        /**
          * Clears the {@link SearchResult}s that were joined.
          *
          * @exportToFramework:hide

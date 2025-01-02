@@ -42,6 +42,9 @@ import androidx.pdf.viewer.fragment.model.PdfFragmentUiState.DocumentLoaded
 import androidx.pdf.viewer.fragment.model.PdfFragmentUiState.Loading
 import androidx.pdf.viewer.fragment.model.PdfFragmentUiState.PasswordRequested
 import androidx.pdf.viewer.fragment.search.PdfSearchViewManager
+import androidx.pdf.viewer.fragment.view.PdfViewManager
+import com.google.android.material.color.MaterialColors
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 @RestrictTo(RestrictTo.Scope.LIBRARY)
@@ -140,7 +143,11 @@ public open class PdfViewerFragmentV2 : Fragment() {
     private lateinit var errorView: TextView
     private lateinit var loadingView: ProgressBar
     private lateinit var pdfSearchView: PdfSearchView
+    private lateinit var pdfViewManager: PdfViewManager
     private lateinit var pdfSearchViewManager: PdfSearchViewManager
+
+    private var searchStateCollector: Job? = null
+    private var highlightStateCollector: Job? = null
 
     // Provides visible pages in viewport both end inclusive.
     private val PdfView.visiblePages: IntRange
@@ -170,18 +177,35 @@ public open class PdfViewerFragmentV2 : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         super.onCreateView(inflater, container, savedInstanceState)
-        val root = inflater.inflate(R.layout.pdf_viewer_fragment, container, false)
-        pdfView = root.findViewById(R.id.pdfView)
-        errorView = root.findViewById(R.id.errorTextView)
-        loadingView = root.findViewById(R.id.pdfLoadingProgressBar)
-        pdfSearchView = root.findViewById(R.id.pdfSearchView)
-        pdfSearchViewManager = PdfSearchViewManager(pdfSearchView)
-
-        return root
+        return inflater.inflate(R.layout.pdf_viewer_fragment, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        with(view) {
+            pdfView = findViewById(R.id.pdfView)
+            errorView = findViewById(R.id.errorTextView)
+            loadingView = findViewById(R.id.pdfLoadingProgressBar)
+            pdfSearchView = findViewById(R.id.pdfSearchView)
+        }
+        pdfViewManager =
+            PdfViewManager(
+                pdfView = pdfView,
+                // TODO(b/385684706): Update colors for highlights
+                selectedHighlightColor =
+                    MaterialColors.getColor(
+                        pdfView,
+                        com.google.android.material.R.attr.colorPrimaryFixed,
+                        requireContext().getColor(R.color.selected_highlight_color)
+                    ),
+                highlightColor =
+                    MaterialColors.getColor(
+                        pdfView,
+                        com.google.android.material.R.attr.colorSecondaryFixedDim,
+                        requireContext().getColor(R.color.highlight_color)
+                    )
+            )
+        pdfSearchViewManager = PdfSearchViewManager(pdfSearchView)
 
         onPdfSearchViewCreated(pdfSearchView)
 
@@ -193,7 +217,6 @@ public open class PdfViewerFragmentV2 : Fragment() {
      */
     protected fun onPdfSearchViewCreated(pdfSearchView: PdfSearchView) {
         setupSearchViewListeners(pdfSearchView)
-        collectSearchUiStates()
         // TODO(b/382307165): add animator to align with keyboard
     }
 
@@ -207,8 +230,14 @@ public open class PdfViewerFragmentV2 : Fragment() {
                 }
                 true // IME action consumed
             }
-            findPrevButton.setOnClickListener { documentViewModel.findPreviousMatch() }
-            findNextButton.setOnClickListener { documentViewModel.findNextMatch() }
+            findPrevButton.setOnClickListener {
+                searchQueryBox.clearFocus()
+                documentViewModel.findPreviousMatch()
+            }
+            findNextButton.setOnClickListener {
+                searchQueryBox.clearFocus()
+                documentViewModel.findNextMatch()
+            }
             closeButton.setOnClickListener { isTextSearchActive = false }
         }
     }
@@ -223,12 +252,28 @@ public open class PdfViewerFragmentV2 : Fragment() {
         documentViewModel.searchDocument(query = query, visiblePageRange = pdfView.visiblePages)
     }
 
-    private fun collectSearchUiStates() {
-        collectFlowOnLifecycleScope {
+    private fun collectViewStates() {
+        searchStateCollector = collectFlowOnLifecycleScope {
             documentViewModel.searchViewUiState.collect { uiState ->
                 pdfSearchViewManager.setState(uiState)
             }
         }
+
+        highlightStateCollector = collectFlowOnLifecycleScope {
+            documentViewModel.highlightsFlow.collect { highlightData ->
+                pdfViewManager.apply {
+                    setHighlights(highlightData)
+                    scrollToCurrentSearchResult(highlightData)
+                }
+            }
+        }
+    }
+
+    private fun cancelViewStateCollection() {
+        searchStateCollector?.cancel()
+        searchStateCollector = null
+        highlightStateCollector?.cancel()
+        highlightStateCollector = null
     }
 
     /**
@@ -251,6 +296,9 @@ public open class PdfViewerFragmentV2 : Fragment() {
 
     private fun handleLoading() {
         setViewVisibility(pdfView = GONE, loadingView = VISIBLE, errorView = GONE)
+        // Cancel view state collection upon new document load.
+        // These state should only be relevant if document is loaded successfully.
+        cancelViewStateCollection()
     }
 
     private fun handlePasswordRequested() {
@@ -262,6 +310,8 @@ public open class PdfViewerFragmentV2 : Fragment() {
         onLoadDocumentSuccess()
         pdfView.pdfDocument = uiState.pdfDocument
         setViewVisibility(pdfView = VISIBLE, loadingView = GONE, errorView = GONE)
+        // Start collection of view states like search, toolbox, etc. once document is loaded.
+        collectViewStates()
     }
 
     private fun handleDocumentError(uiState: DocumentError) {
@@ -275,8 +325,8 @@ public open class PdfViewerFragmentV2 : Fragment() {
         this.errorView.visibility = errorView
     }
 
-    private fun collectFlowOnLifecycleScope(block: suspend () -> Unit) {
-        viewLifecycleOwner.lifecycleScope.launch {
+    private fun collectFlowOnLifecycleScope(block: suspend () -> Unit): Job {
+        return viewLifecycleOwner.lifecycleScope.launch {
             /**
              * [repeatOnLifecycle] launches the block in a new coroutine every time the lifecycle is
              * in the STARTED state (or above) and cancels it when it's STOPPED.

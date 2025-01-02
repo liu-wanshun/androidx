@@ -17,14 +17,16 @@
 package androidx.pdf.view
 
 import android.graphics.PointF
-import android.os.SystemClock
+import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import androidx.test.espresso.UiController
 import androidx.test.espresso.ViewAction
 import androidx.test.espresso.ViewInteraction
+import androidx.test.espresso.action.GeneralClickAction
+import androidx.test.espresso.action.Press
+import androidx.test.espresso.action.Tap
 import androidx.test.espresso.matcher.ViewMatchers
-import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import org.hamcrest.Matcher
 import org.hamcrest.Matchers
 
@@ -133,44 +135,19 @@ private class ScrollPdfViewToPage : ViewAction {
  * @return A ViewAction that can be used with Espresso to perform the tap.
  */
 internal fun performSingleTapOnCoords(x: Float, y: Float): ViewAction {
-    return object : ViewAction {
-        override fun getConstraints() = isDisplayed()
+    return GeneralClickAction(
+        Tap.SINGLE,
+        { view ->
+            val screenPos = IntArray(2)
+            view.getLocationOnScreen(screenPos)
 
-        override fun getDescription() = "Single tap at coordinates ($x, $y)"
+            val screenX = (screenPos[0] + x).toFloat()
+            val screenY = (screenPos[1] + y).toFloat()
 
-        override fun perform(uiController: UiController, view: View) {
-            check(view is PdfView)
-            val adjustedX = (x * view.zoom) + view.scrollX
-            val adjustedY = (y * view.zoom) + view.scrollY
-
-            val screenCoords = IntArray(2)
-            view.getLocationOnScreen(screenCoords)
-
-            val screenX = screenCoords[0] + adjustedX
-            val screenY = screenCoords[1] + adjustedY
-
-            val downEvent =
-                MotionEvent.obtain(
-                    SystemClock.uptimeMillis(),
-                    SystemClock.uptimeMillis(),
-                    MotionEvent.ACTION_DOWN,
-                    screenX,
-                    screenY,
-                    0
-                )
-
-            val upEvent =
-                MotionEvent.obtain(
-                    SystemClock.uptimeMillis(),
-                    SystemClock.uptimeMillis() + 100,
-                    MotionEvent.ACTION_UP,
-                    screenX,
-                    screenY,
-                    0
-                )
-
-            view.dispatchTouchEvent(downEvent)
-            view.dispatchTouchEvent(upEvent)
-        }
-    }
+            floatArrayOf(screenX, screenY)
+        },
+        Press.FINGER,
+        InputDevice.SOURCE_TOUCHSCREEN,
+        MotionEvent.BUTTON_PRIMARY
+    )
 }

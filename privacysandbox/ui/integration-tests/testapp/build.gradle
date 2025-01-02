@@ -61,7 +61,6 @@ dependencies {
     implementation(project(":privacysandbox:ui:integration-tests:testaidl"))
     implementation(project(":privacysandbox:ui:integration-tests:sdkproviderutils"))
     implementation(project(":privacysandbox:ui:integration-tests:testsdkproviderwrapper"))
-    implementation(project(":privacysandbox:ui:integration-tests:mediateesdkproviderwrapper"))
     implementation(project(":privacysandbox:ui:ui-client"))
     implementation(project(":privacysandbox:ui:ui-provider"))
 }

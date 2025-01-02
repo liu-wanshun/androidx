@@ -44,8 +44,8 @@ internal sealed interface SearchViewUiState {
      * In this state, the search view contains a non-empty query and results if the search operation
      * has finished.
      *
-     * @param currentIndex: current match index out of total matches.
+     * @param currentMatch: current match out of total matches.
      * @param totalMatches: total number of matches after search operation.
      */
-    data class Active(val currentIndex: Int, val totalMatches: Int) : SearchViewUiState
+    data class Active(val currentMatch: Int, val totalMatches: Int) : SearchViewUiState
 }

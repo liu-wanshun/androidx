@@ -26,7 +26,7 @@ import org.jspecify.annotations.NonNull;
 public class ClientVersion {
     // Current version of vendor library implementation that the CameraX extension supports. This
     // needs to be increased along with the version of vendor library interface.
-    private static ClientVersion sCurrent = new ClientVersion("1.4.0");
+    private static ClientVersion sCurrent = new ClientVersion("1.5.0");
 
     public static @NonNull ClientVersion getCurrentVersion() {
         return sCurrent;

@@ -16,6 +16,9 @@
 
 package androidx.camera.core.impl;
 
+import static android.hardware.camera2.CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_ON;
+import static android.hardware.camera2.CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION;
+
 import android.util.Range;
 import android.util.Rational;
 
@@ -24,8 +27,10 @@ import androidx.camera.core.ExposureState;
 import androidx.camera.core.FocusMeteringAction;
 import androidx.camera.core.TorchState;
 import androidx.camera.core.ZoomState;
+import androidx.camera.core.impl.utils.LiveDataUtil;
 import androidx.camera.core.impl.utils.SessionProcessorUtil;
 import androidx.camera.core.internal.ImmutableZoomState;
+import androidx.core.math.MathUtils;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
@@ -66,6 +71,7 @@ public class AdapterCameraInfo extends ForwardingCameraInfo {
     private boolean mIsPostviewSupported = false;
     private boolean mIsCaptureProcessProgressSupported = false;
     private final @NonNull CameraConfig mCameraConfig;
+    private @Nullable LiveData<ZoomState> mExtensionZoomStateLiveData = null;
 
     public AdapterCameraInfo(@NonNull CameraInfoInternal cameraInfo,
             @NonNull CameraConfig cameraConfig) {
@@ -112,12 +118,85 @@ public class AdapterCameraInfo extends ForwardingCameraInfo {
         return mCameraInfo.getTorchState();
     }
 
+    /**
+     * Return the zoom ratio calculated by the linear zoom (percentage)
+     */
+    public static float getZoomRatioByPercentage(float percentage,
+            float minZoomRatio, float maxZoomRatio) {
+        // Make sure 1.0f and 0.0 return exactly the same max/min ratio.
+        if (percentage == 1.0f) {
+            return maxZoomRatio;
+        } else if (percentage == 0f) {
+            return minZoomRatio;
+        }
+        // This crop width is proportional to the real crop width.
+        // The real crop with = sensorWidth/ zoomRatio,  but we need the ratio only so we can
+        // assume sensorWidth as 1.0f.
+        double cropWidthInMaxZoom = 1.0f / maxZoomRatio;
+        double cropWidthInMinZoom = 1.0f / minZoomRatio;
+
+        double cropWidth = cropWidthInMinZoom + (cropWidthInMaxZoom - cropWidthInMinZoom)
+                * percentage;
+
+        double ratio = 1.0 / cropWidth;
+
+        return (float) MathUtils.clamp(ratio, minZoomRatio, maxZoomRatio);
+    }
+
+    /**
+     * Return the linear zoom (percentage) calculated by the zoom ratio.
+     */
+    public static float getPercentageByRatio(float ratio, float minZoomRatio, float maxZoomRatio) {
+        // if zoom is not supported, return 0
+        if (maxZoomRatio == minZoomRatio) {
+            return 0f;
+        }
+
+        // To make the min/max same value when doing conversion between ratio / percentage.
+        // We return the max/min value directly.
+        if (ratio == maxZoomRatio) {
+            return 1f;
+        } else if (ratio == minZoomRatio) {
+            return 0f;
+        }
+
+        float cropWidth = 1.0f / ratio;
+        float cropWidthInMaxZoom = 1.0f / maxZoomRatio;
+        float cropWidthInMinZoom = 1.0f / minZoomRatio;
+
+        return (cropWidth - cropWidthInMinZoom) / (cropWidthInMaxZoom - cropWidthInMinZoom);
+    }
+
     @Override
     public @NonNull LiveData<ZoomState> getZoomState() {
         if (!SessionProcessorUtil.isOperationSupported(mSessionProcessor, CAMERA_OPERATION_ZOOM)) {
             return new MutableLiveData<>(ImmutableZoomState.create(
                     /* zoomRatio */1f, /* maxZoomRatio */ 1f,
                     /* minZoomRatio */ 1f, /* linearZoom*/ 0f));
+        }
+
+        if (mSessionProcessor != null) {
+            ZoomState zoomState = mCameraInfo.getZoomState().getValue();
+            Range<Float> extensionsZoomRange = mSessionProcessor.getExtensionZoomRange();
+            if (extensionsZoomRange != null
+                    && (extensionsZoomRange.getLower() != zoomState.getMinZoomRatio()
+                    || extensionsZoomRange.getUpper() != zoomState.getMaxZoomRatio())) {
+                if (mExtensionZoomStateLiveData == null) {
+                    // Transform the zoomState to have adjusted maxzoom, minzoom and linear zoom
+                    mExtensionZoomStateLiveData = LiveDataUtil.map(mCameraInfo.getZoomState(),
+                            (state) -> {
+                                return ImmutableZoomState.create(
+                                        state.getZoomRatio(),
+                                        extensionsZoomRange.getUpper(),
+                                        extensionsZoomRange.getLower(),
+                                        getPercentageByRatio(state.getZoomRatio(),
+                                                extensionsZoomRange.getLower(),
+                                                extensionsZoomRange.getUpper())
+                                );
+                            });
+                }
+                return mExtensionZoomStateLiveData;
+            }
         }
         return mCameraInfo.getZoomState();
     }
@@ -186,5 +265,37 @@ public class AdapterCameraInfo extends ForwardingCameraInfo {
     @Override
     public boolean isCaptureProcessProgressSupported() {
         return mIsCaptureProcessProgressSupported;
+    }
+
+    @Override
+    public boolean isVideoStabilizationSupported() {
+        if (mSessionProcessor != null) {
+            int[] stabilizationModes = mSessionProcessor.getExtensionAvailableStabilizationModes();
+            if (stabilizationModes != null) {
+                for (int mode : stabilizationModes) {
+                    if (mode == CONTROL_VIDEO_STABILIZATION_MODE_ON) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+        return super.isVideoStabilizationSupported();
+    }
+
+    @Override
+    public boolean isPreviewStabilizationSupported() {
+        if (mSessionProcessor != null) {
+            int[] stabilizationModes = mSessionProcessor.getExtensionAvailableStabilizationModes();
+            if (stabilizationModes != null) {
+                for (int mode : stabilizationModes) {
+                    if (mode == CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+        return super.isPreviewStabilizationSupported();
     }
 }

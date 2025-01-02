@@ -18,18 +18,22 @@ package androidx.room.writer
 
 import androidx.room.compiler.codegen.XCodeBlock
 import androidx.room.ext.RoomTypeNames
-import androidx.room.vo.Pojo
+import androidx.room.vo.DataClass
 import androidx.room.vo.ShortcutEntity
 
-class EntityUpsertAdapterWriter private constructor(val tableName: String, val pojo: Pojo) {
+class EntityUpsertAdapterWriter
+private constructor(val tableName: String, val dataClass: DataClass) {
     companion object {
         fun create(entity: ShortcutEntity): EntityUpsertAdapterWriter {
-            return EntityUpsertAdapterWriter(tableName = entity.tableName, pojo = entity.pojo)
+            return EntityUpsertAdapterWriter(
+                tableName = entity.tableName,
+                dataClass = entity.dataClass
+            )
         }
     }
 
     fun createConcrete(entity: ShortcutEntity, typeWriter: TypeWriter): XCodeBlock {
-        val upsertAdapter = RoomTypeNames.UPSERT_ADAPTER.parametrizedBy(pojo.typeName)
+        val upsertAdapter = RoomTypeNames.UPSERT_ADAPTER.parametrizedBy(dataClass.typeName)
         val insertHelper = EntityInsertAdapterWriter.create(entity, "").createAnonymous(typeWriter)
         val updateHelper = EntityUpdateAdapterWriter.create(entity, "").createAnonymous(typeWriter)
         return XCodeBlock.ofNewInstance(

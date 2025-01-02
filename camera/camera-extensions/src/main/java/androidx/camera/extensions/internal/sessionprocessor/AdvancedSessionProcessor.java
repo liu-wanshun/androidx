@@ -385,6 +385,12 @@ public class AdvancedSessionProcessor extends SessionProcessorBase {
         return mVendorExtender.getSupportedPostviewResolutions(captureSize);
     }
 
+    @Override
+    public @NonNull List<Pair<CameraCharacteristics.Key, Object>>
+        getAvailableCharacteristicsKeyValues() {
+        return mVendorExtender.getAvailableCharacteristicsKeyValues();
+    }
+
     /**
      * Adapter to transform a {@link OutputSurface} to a {@link OutputSurfaceImpl}.
      */

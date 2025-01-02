@@ -251,6 +251,18 @@ package androidx.camera.core {
     method public T build();
   }
 
+  public final class FlashState {
+    property public static final int FLASH_STATE_FIRED;
+    property public static final int FLASH_STATE_READY;
+    property public static final int FLASH_STATE_UNAVAILABLE;
+    property public static final int FLASH_STATE_UNKNOWN;
+    field public static final int FLASH_STATE_FIRED = 1; // 0x1
+    field public static final int FLASH_STATE_READY = 3; // 0x3
+    field public static final int FLASH_STATE_UNAVAILABLE = 2; // 0x2
+    field public static final int FLASH_STATE_UNKNOWN = 0; // 0x0
+    field public static final androidx.camera.core.FlashState INSTANCE;
+  }
+
   public final class FocusMeteringAction {
     method public long getAutoCancelDurationInMillis();
     method public java.util.List<androidx.camera.core.MeteringPoint!> getMeteringPointsAe();
@@ -455,6 +467,7 @@ package androidx.camera.core {
   }
 
   public interface ImageInfo {
+    method public default int getFlashState();
     method public int getRotationDegrees();
     method public default android.graphics.Matrix getSensorToBufferTransformMatrix();
     method public long getTimestamp();

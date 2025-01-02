@@ -252,7 +252,8 @@ public class SearchSupportFragment extends Fragment {
     }
 
     /**
-     * @param args Bundle to use for the arguments, if null a new Bundle will be created.
+     * @param args  Bundle to use for the arguments, if null a new Bundle will be created.
+     * @param query The search query, which is added to the bundle
      */
     public static Bundle createArgs(Bundle args, String query) {
         return createArgs(args, query, null);

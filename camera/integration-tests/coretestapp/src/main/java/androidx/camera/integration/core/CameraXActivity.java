@@ -27,6 +27,8 @@ import static androidx.camera.core.ImageCapture.FLASH_MODE_AUTO;
 import static androidx.camera.core.ImageCapture.FLASH_MODE_OFF;
 import static androidx.camera.core.ImageCapture.FLASH_MODE_ON;
 import static androidx.camera.core.ImageCapture.FLASH_MODE_SCREEN;
+import static androidx.camera.core.ImageCapture.FLASH_TYPE_ONE_SHOT_FLASH;
+import static androidx.camera.core.ImageCapture.FLASH_TYPE_USE_TORCH_AS_FLASH;
 import static androidx.camera.core.ImageCapture.OUTPUT_FORMAT_JPEG;
 import static androidx.camera.core.ImageCapture.OUTPUT_FORMAT_JPEG_ULTRA_HDR;
 import static androidx.camera.core.ImageCapture.OUTPUT_FORMAT_RAW;
@@ -397,6 +399,7 @@ public class CameraXActivity extends AppCompatActivity {
     private Range<Integer> mFpsRange = FPS_UNSPECIFIED;
     private boolean mForceEnableStreamSharing;
     private boolean mDisableViewPort;
+    private boolean mEnableTorchAsFlash;
 
     SessionMediaUriSet mSessionImagesUriSet = new SessionMediaUriSet();
     SessionMediaUriSet mSessionVideosUriSet = new SessionMediaUriSet();
@@ -1755,6 +1758,7 @@ public class CameraXActivity extends AppCompatActivity {
                 mPreviewToggle.isChecked() && mVideoToggle.isChecked());
 
         menu.findItem(R.id.view_port).setChecked(mDisableViewPort);
+        menu.findItem(R.id.torch_as_flash).setChecked(mEnableTorchAsFlash);
     }
 
     private static <T, E> T getKeyByValue(Map<T, E> map, E value) {
@@ -1792,6 +1796,8 @@ public class CameraXActivity extends AppCompatActivity {
             mForceEnableStreamSharing = !mForceEnableStreamSharing;
         } else if (itemId == R.id.view_port) {
             mDisableViewPort = !mDisableViewPort;
+        } else if (itemId == R.id.torch_as_flash) {
+            mEnableTorchAsFlash = !mEnableTorchAsFlash;
         } else {
             Log.d(TAG, "Not handling item " + item.getTitle());
             return super.onOptionsItemSelected(item);
@@ -2021,7 +2027,13 @@ public class CameraXActivity extends AppCompatActivity {
         }
 
         if (mPhotoToggle.isChecked()) {
+            int flashType = FLASH_TYPE_ONE_SHOT_FLASH;
+            if (mEnableTorchAsFlash) {
+                flashType = FLASH_TYPE_USE_TORCH_AS_FLASH;
+            }
+
             ImageCapture imageCapture = new ImageCapture.Builder()
+                    .setFlashType(flashType)
                     .setCaptureMode(getCaptureMode())
                     .setTargetAspectRatio(mTargetAspectRatio)
                     .setOutputFormat(mImageOutputFormat)

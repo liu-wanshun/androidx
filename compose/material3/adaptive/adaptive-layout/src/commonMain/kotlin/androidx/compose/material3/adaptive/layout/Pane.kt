@@ -22,6 +22,7 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveComponentOverrideApi
 import androidx.compose.material3.adaptive.layout.DefaultAnimatedPaneOverride.AnimatedPane
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ProvidableCompositionLocal
@@ -31,7 +32,8 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.unit.IntRect
 
 /** Interface that allows libraries to override the behavior of [AnimatedPane]. */
-@ExperimentalMaterial3AdaptiveApi
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@ExperimentalMaterial3AdaptiveComponentOverrideApi
 interface AnimatedPaneOverride {
     /** Behavior function that is called by the [AnimatedPane] composable. */
     @Composable fun <S, T : PaneScaffoldValue<S>> AnimatedPaneOverrideContext<S, T>.AnimatedPane()
@@ -47,7 +49,8 @@ interface AnimatedPaneOverride {
  *   the pane is keeping showing but changing its size and/or position.
  * @param content The content of the [AnimatedPane]. Also see [AnimatedPaneScope].
  */
-@ExperimentalMaterial3AdaptiveApi
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@ExperimentalMaterial3AdaptiveComponentOverrideApi
 class AnimatedPaneOverrideContext<S, T : PaneScaffoldValue<S>>
 internal constructor(
     val scope: ExtendedPaneScaffoldPaneScope<S, T>,
@@ -60,8 +63,8 @@ internal constructor(
 
 /** CompositionLocal containing the currently-selected [AnimatedPaneOverride]. */
 @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
-@get:ExperimentalMaterial3AdaptiveApi
-@ExperimentalMaterial3AdaptiveApi
+@get:ExperimentalMaterial3AdaptiveComponentOverrideApi
+@ExperimentalMaterial3AdaptiveComponentOverrideApi
 val LocalAnimatedPaneOverride: ProvidableCompositionLocal<AnimatedPaneOverride> =
     compositionLocalOf {
         DefaultAnimatedPaneOverride
@@ -85,6 +88,7 @@ val LocalAnimatedPaneOverride: ProvidableCompositionLocal<AnimatedPaneOverride> 
  * @sample androidx.compose.material3.adaptive.samples.ListDetailPaneScaffoldSample
  * @sample androidx.compose.material3.adaptive.samples.ListDetailPaneScaffoldSampleWithExtraPane
  */
+@OptIn(ExperimentalMaterial3AdaptiveComponentOverrideApi::class)
 @ExperimentalMaterial3AdaptiveApi
 @Composable
 fun <S, T : PaneScaffoldValue<S>> ExtendedPaneScaffoldPaneScope<S, T>.AnimatedPane(
@@ -124,7 +128,8 @@ sealed interface AnimatedPaneScope : AnimatedVisibilityScope {
 }
 
 /** [AnimatedPaneOverride] used when no override is specified. */
-@ExperimentalMaterial3AdaptiveApi
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@ExperimentalMaterial3AdaptiveComponentOverrideApi
 private object DefaultAnimatedPaneOverride : AnimatedPaneOverride {
     @Composable
     override fun <S, T : PaneScaffoldValue<S>> AnimatedPaneOverrideContext<S, T>.AnimatedPane() {

@@ -980,4 +980,3 @@ public class ExifData {
         }
     }
 }
-

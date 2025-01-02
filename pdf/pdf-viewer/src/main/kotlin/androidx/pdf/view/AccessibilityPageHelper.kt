@@ -18,11 +18,16 @@ package androidx.pdf.view
 
 import android.content.Context
 import android.graphics.Rect
+import android.graphics.RectF
 import android.os.Bundle
 import androidx.annotation.NonNull
+import androidx.annotation.VisibleForTesting
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.customview.widget.ExploreByTouchHelper
 import androidx.pdf.R
+import androidx.pdf.content.PdfPageGotoLinkContent
+import androidx.pdf.content.PdfPageLinkContent
+import androidx.pdf.util.ExternalLinks
 
 /**
  * Accessibility delegate for PdfView that provides a virtual view hierarchy for pages.
@@ -36,12 +41,36 @@ internal class AccessibilityPageHelper(
     private val pageManager: PageManager
 ) : ExploreByTouchHelper(pdfView) {
 
-    override fun getVirtualViewAt(x: Float, y: Float): Int {
+    private var gotoLinks: MutableList<PdfPageGotoLinkContent> = mutableListOf()
+    private var urlLinks: MutableList<PdfPageLinkContent> = mutableListOf()
+    private val totalPages = pdfView.pdfDocument?.pageCount ?: 0
+    private var isLinksLoaded = false
+
+    public override fun getVirtualViewAt(x: Float, y: Float): Int {
         val visiblePages = pageLayoutManager.visiblePages.value
 
         val contentX = pdfView.toContentX(x).toInt()
         val contentY = pdfView.toContentY(y).toInt()
 
+        if (!isLinksLoaded) {
+            loadPageLinks()
+        }
+
+        // Check if the coordinates fall within any of the gotoLinks bounds
+        gotoLinks.forEachIndexed { index, gotoLink ->
+            if (gotoLink.bounds.any { it.contains(contentX.toFloat(), contentY.toFloat()) }) {
+                return index + totalPages
+            }
+        }
+
+        // Check if the coordinates fall within any of the urlLinks bounds
+        urlLinks.forEachIndexed { index, urlLink ->
+            if (urlLink.bounds.any { it.contains(contentX.toFloat(), contentY.toFloat()) }) {
+                return index + totalPages + gotoLinks.size
+            }
+        }
+
+        // Check if the coordinates fall within the visible page bounds
         return (visiblePages.lower..visiblePages.upper).firstOrNull { page ->
             pageLayoutManager
                 .getPageLocation(page, pdfView.getVisibleAreaInContentCoords())
@@ -49,30 +78,29 @@ internal class AccessibilityPageHelper(
         } ?: HOST_ID
     }
 
-    override fun getVisibleVirtualViews(virtualViewIds: MutableList<Int>) {
+    public override fun getVisibleVirtualViews(virtualViewIds: MutableList<Int>) {
         val visiblePages = pageLayoutManager.visiblePages.value
         virtualViewIds.addAll(visiblePages.lower..visiblePages.upper)
+
+        loadPageLinks()
+
+        gotoLinks.forEachIndexed { index, _ -> virtualViewIds.add(totalPages + index) }
+
+        urlLinks.forEachIndexed { index, _ ->
+            virtualViewIds.add(totalPages + gotoLinks.size + index)
+        }
     }
 
-    override fun onPopulateNodeForVirtualView(
+    public override fun onPopulateNodeForVirtualView(
         virtualViewId: Int,
         @NonNull node: AccessibilityNodeInfoCompat
     ) {
-        node.apply {
-            // Set content description (use extracted text if available, otherwise a placeholder)
-            val pageText = pageManager.pages.get(virtualViewId)?.pageText
-            contentDescription =
-                pageText?.let { getContentDescriptionForPage(pdfView.context, virtualViewId, it) }
-                    ?: getDefaultDesc(pdfView.context, virtualViewId)
+        if (!isLinksLoaded) loadPageLinks()
 
-            val pageBounds =
-                pageLayoutManager.getPageLocation(
-                    virtualViewId,
-                    pdfView.getVisibleAreaInContentCoords()
-                )
-            setBoundsInScreenFromBoundsInParent(node, scalePageBounds(pageBounds, pdfView.zoom))
-
-            isFocusable = true
+        if (virtualViewId < totalPages) {
+            populateNodeForPage(virtualViewId, node)
+        } else {
+            populateNodeForLink(virtualViewId, node)
         }
     }
 
@@ -85,13 +113,85 @@ internal class AccessibilityPageHelper(
         return false
     }
 
-    private fun scalePageBounds(bounds: Rect, zoom: Float): Rect {
+    private fun populateNodeForPage(virtualViewId: Int, node: AccessibilityNodeInfoCompat) {
+        val pageText = pageManager.pages[virtualViewId]?.pageText
+        val pageBounds =
+            pageLayoutManager.getPageLocation(
+                virtualViewId,
+                pdfView.getVisibleAreaInContentCoords()
+            )
+
+        node.apply {
+            contentDescription =
+                pageText?.let { getContentDescriptionForPage(pdfView.context, virtualViewId, it) }
+                    ?: getDefaultDesc(pdfView.context, virtualViewId)
+
+            setBoundsInScreenFromBoundsInParent(
+                node,
+                scalePageBounds(RectF(pageBounds), pdfView.zoom)
+            )
+            isFocusable = true
+        }
+    }
+
+    private fun populateNodeForLink(virtualViewId: Int, node: AccessibilityNodeInfoCompat) {
+        val adjustedId = virtualViewId - totalPages
+        if (adjustedId < gotoLinks.size) {
+            populateGotoLinkNode(adjustedId, node)
+        } else {
+            populateUrlLinkNode(adjustedId - gotoLinks.size, node)
+        }
+    }
+
+    private fun populateGotoLinkNode(linkIndex: Int, node: AccessibilityNodeInfoCompat) {
+        val gotoLink = gotoLinks[linkIndex]
+        val bounds = scalePageBounds(gotoLink.bounds.first(), pdfView.zoom)
+        node.apply {
+            contentDescription =
+                pdfView.context.getString(
+                    R.string.desc_goto_link,
+                    gotoLink.destination.pageNumber + 1
+                )
+            setBoundsInScreenFromBoundsInParent(node, bounds)
+            isFocusable = true
+        }
+    }
+
+    private fun populateUrlLinkNode(linkIndex: Int, node: AccessibilityNodeInfoCompat) {
+        val urlLink = urlLinks[linkIndex]
+        val bounds = scalePageBounds(urlLink.bounds.first(), pdfView.zoom)
+        node.apply {
+            contentDescription =
+                ExternalLinks.getDescription(urlLink.uri.toString(), pdfView.context)
+            setBoundsInScreenFromBoundsInParent(node, bounds)
+            isFocusable = true
+        }
+    }
+
+    @VisibleForTesting
+    fun scalePageBounds(bounds: RectF, zoom: Float): Rect {
         return Rect(
             (bounds.left * zoom).toInt(),
             (bounds.top * zoom).toInt(),
             (bounds.right * zoom).toInt(),
             (bounds.bottom * zoom).toInt()
         )
+    }
+
+    fun loadPageLinks() {
+        val visiblePages = pageLayoutManager.visiblePages.value
+
+        // Clear existing links and fetch new ones for the visible pages
+        gotoLinks.clear()
+        urlLinks.clear()
+
+        (visiblePages.lower..visiblePages.upper).forEach { pageIndex ->
+            pageManager.pages[pageIndex]?.links?.let { links ->
+                links.gotoLinks.let { gotoLinks.addAll(it) }
+                links.externalLinks.let { urlLinks.addAll(it) }
+            }
+        }
+        isLinksLoaded = true
     }
 
     /**

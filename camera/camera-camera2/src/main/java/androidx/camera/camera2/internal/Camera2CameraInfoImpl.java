@@ -66,10 +66,9 @@ import androidx.camera.core.impl.ImageOutputConfig.RotationValue;
 import androidx.camera.core.impl.Quirks;
 import androidx.camera.core.impl.Timebase;
 import androidx.camera.core.impl.utils.CameraOrientationUtil;
+import androidx.camera.core.impl.utils.RedirectableLiveData;
 import androidx.core.util.Preconditions;
 import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MediatorLiveData;
-import androidx.lifecycle.Observer;
 
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
@@ -678,40 +677,4 @@ public final class Camera2CameraInfoImpl implements CameraInfoInternal {
 
         return mPhysicalCameraInfos;
     }
-
-    /**
-     * A {@link LiveData} which can be redirected to another {@link LiveData}. If no redirection
-     * is set, initial value will be used.
-     */
-    static class RedirectableLiveData<T> extends MediatorLiveData<T> {
-        private LiveData<T> mLiveDataSource;
-        private final T mInitialValue;
-
-        RedirectableLiveData(T initialValue) {
-            mInitialValue = initialValue;
-        }
-
-        void redirectTo(@NonNull LiveData<T> liveDataSource) {
-            if (mLiveDataSource != null) {
-                super.removeSource(mLiveDataSource);
-            }
-            mLiveDataSource = liveDataSource;
-            super.addSource(liveDataSource, this::setValue);
-        }
-
-        @Override
-        public <S> void addSource(@NonNull LiveData<S> source,
-                @NonNull Observer<? super S> onChanged) {
-            throw new UnsupportedOperationException();
-        }
-
-        // Overrides getValue() to reflect the correct value from source. This is required to ensure
-        // getValue() is correct when observe() or observeForever() is not called.
-        @Override
-        public T getValue() {
-            // Returns initial value if source is not set.
-            return mLiveDataSource == null ? mInitialValue : mLiveDataSource.getValue();
-        }
-    }
-
 }

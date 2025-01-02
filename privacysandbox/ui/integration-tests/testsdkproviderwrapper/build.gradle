@@ -44,4 +44,5 @@ android {
 
 dependencies {
     include(project(":privacysandbox:ui:integration-tests:testsdkprovider"))
+    requiredSdk(project(":privacysandbox:ui:integration-tests:mediateesdkproviderwrapper"))
 }

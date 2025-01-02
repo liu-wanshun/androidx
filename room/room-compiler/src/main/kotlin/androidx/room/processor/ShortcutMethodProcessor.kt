@@ -20,8 +20,8 @@ import androidx.room.compiler.processing.XMethodElement
 import androidx.room.compiler.processing.XType
 import androidx.room.compiler.processing.XTypeElement
 import androidx.room.ext.isEntityElement
+import androidx.room.vo.DataClass
 import androidx.room.vo.Entity
-import androidx.room.vo.Pojo
 import androidx.room.vo.ShortcutEntity
 import androidx.room.vo.ShortcutQueryParameter
 import androidx.room.vo.findFieldByColumnName
@@ -68,7 +68,7 @@ class ShortcutMethodProcessor(
     fun extractParams(
         targetEntityType: XType?,
         missingParamError: String,
-        onValidatePartialEntity: (Entity, Pojo) -> Unit
+        onValidatePartialEntity: (Entity, DataClass) -> Unit
     ): Pair<Map<String, ShortcutEntity>, List<ShortcutQueryParameter>> {
         val params =
             delegate.extractParams().map {
@@ -123,7 +123,7 @@ class ShortcutMethodProcessor(
     private fun extractPartialEntities(
         targetEntity: Entity,
         params: List<ShortcutQueryParameter>,
-        onValidatePartialEntity: (Entity, Pojo) -> Unit
+        onValidatePartialEntity: (Entity, DataClass) -> Unit
     ) =
         params.associateBy(
             { it.name },
@@ -145,7 +145,7 @@ class ShortcutMethodProcessor(
                             )
                             null
                         } else {
-                            PojoProcessor.createFor(
+                            DataClassProcessor.createFor(
                                     context = context,
                                     element = pojoTypeElement,
                                     bindingScope = FieldProcessor.BindingScope.BIND_TO_STMT,

@@ -40,7 +40,6 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.NativeKeyEvent
@@ -384,7 +383,6 @@ private fun SurfaceImpl(
                         this.alpha = surfaceAlpha
                         this.shape = shape
                         this.clip = true
-                        this.compositingStrategy = CompositingStrategy.Offscreen
                     },
             propagateMinConstraints = true
         ) {

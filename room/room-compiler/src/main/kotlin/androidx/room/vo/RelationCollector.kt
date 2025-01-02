@@ -119,7 +119,7 @@ data class RelationCollector(
         val indexVar = fieldsWithIndices.firstOrNull { it.field === relation.parentField }?.indexVar
         checkNotNull(indexVar) {
             "Expected an index var for a column named '${relation.parentField.columnName}' to " +
-                "query the '${relation.pojoType}' @Relation but didn't. Please file a bug at " +
+                "query the '${relation.dataClassType}' @Relation but didn't. Please file a bug at " +
                 ISSUE_TRACKER_LINK
         }
         scope.builder.apply {
@@ -157,7 +157,7 @@ data class RelationCollector(
         val indexVar = fieldsWithIndices.firstOrNull { it.field === relation.parentField }?.indexVar
         checkNotNull(indexVar) {
             "Expected an index var for a column named '${relation.parentField.columnName}' to " +
-                "query the '${relation.pojoType}' @Relation but didn't. Please file a bug at " +
+                "query the '${relation.dataClassType}' @Relation but didn't. Please file a bug at " +
                 ISSUE_TRACKER_LINK
         }
         val tmpVarNameSuffix = if (relationTypeIsCollection) "Collection" else ""
@@ -450,7 +450,7 @@ data class RelationCollector(
                     // row adapter that matches full response
                     fun getDefaultRowAdapter(): RowAdapter? {
                         return context.typeAdapterStore.findRowAdapter(
-                            relation.pojoType,
+                            relation.dataClassType,
                             parsedQuery
                         )
                     }
@@ -463,7 +463,7 @@ data class RelationCollector(
                             // check for a column adapter first
                             val cursorReader =
                                 context.typeAdapterStore.findStatementValueReader(
-                                    relation.pojoType,
+                                    relation.dataClassType,
                                     resultInfo.columns.first().type
                                 )
                             if (cursorReader == null) {
@@ -479,7 +479,7 @@ data class RelationCollector(
                         context.logger.e(
                             relation.field.element,
                             ProcessorErrors.cannotFindQueryResultAdapter(
-                                relation.pojoType.asTypeName().toString(context.codeLanguage)
+                                relation.dataClassType.asTypeName().toString(context.codeLanguage)
                             )
                         )
                         null
@@ -574,23 +574,24 @@ data class RelationCollector(
                             when (context.codeLanguage) {
                                 CodeLanguage.KOTLIN ->
                                     CommonTypeNames.MUTABLE_SET.parametrizedBy(
-                                        relation.pojoTypeName
+                                        relation.dataClassTypeName
                                     )
-                                CodeLanguage.JAVA -> HASH_SET.parametrizedBy(relation.pojoTypeName)
+                                CodeLanguage.JAVA ->
+                                    HASH_SET.parametrizedBy(relation.dataClassTypeName)
                             }
                         } else {
                             when (context.codeLanguage) {
                                 CodeLanguage.KOTLIN ->
                                     CommonTypeNames.MUTABLE_LIST.parametrizedBy(
-                                        relation.pojoTypeName
+                                        relation.dataClassTypeName
                                     )
                                 CodeLanguage.JAVA ->
-                                    ARRAY_LIST.parametrizedBy(relation.pojoTypeName)
+                                    ARRAY_LIST.parametrizedBy(relation.dataClassTypeName)
                             }
                         }
                     paramTypeName to true
                 } else {
-                    relation.pojoTypeName.copy(nullable = true) to false
+                    relation.dataClassTypeName.copy(nullable = true) to false
                 }
             }
 

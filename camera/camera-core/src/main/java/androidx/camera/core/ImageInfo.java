@@ -16,6 +16,9 @@
 
 package androidx.camera.core;
 
+import static androidx.camera.core.FlashState.FlashState;
+import static androidx.camera.core.FlashState.FLASH_STATE_UNKNOWN;
+
 import android.graphics.Matrix;
 import android.hardware.camera2.CameraCharacteristics;
 
@@ -114,6 +117,14 @@ public interface ImageInfo {
      */
     default @NonNull Matrix getSensorToBufferTransformMatrix() {
         return new Matrix();
+    }
+
+    /**
+     * Returns the {@link androidx.camera.core.FlashState} value corresponding to the image capture.
+     */
+    @FlashState
+    default int getFlashState() {
+        return FLASH_STATE_UNKNOWN;
     }
 
     /**

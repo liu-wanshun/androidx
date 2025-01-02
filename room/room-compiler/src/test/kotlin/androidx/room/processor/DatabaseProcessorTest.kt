@@ -35,8 +35,8 @@ import androidx.room.parser.Table
 import androidx.room.processor.ProcessorErrors.invalidAutoMigrationSchema
 import androidx.room.runKspTestWithK1
 import androidx.room.runProcessorTestWithK1
+import androidx.room.solver.query.result.DataClassRowAdapter
 import androidx.room.solver.query.result.EntityRowAdapter
-import androidx.room.solver.query.result.PojoRowAdapter
 import androidx.room.testing.context
 import androidx.room.vo.Database
 import androidx.room.vo.DatabaseView
@@ -140,21 +140,21 @@ class DatabaseProcessorTest {
                     public User loadWithConverter(int uid);
 
                     @Query("SELECT * FROM user where uid = :uid")
-                    public Pojo loadOnePojo(int uid);
+                    public DataClass loadOneDataClass(int uid);
 
                     @Query("SELECT * FROM user")
-                    public java.util.List<Pojo> loadAllPojos();
+                    public java.util.List<DataClass> loadAllDataClasses();
 
                     @TypeConverters(Converter.class)
                     @Query("SELECT * FROM user where uid = :uid")
-                    public Pojo loadPojoWithConverter(int uid);
+                    public DataClass loadDataClassWithConverter(int uid);
 
                     public static class Converter {
                         @TypeConverter
                         public static java.util.Date foo(Long input) {return null;}
                     }
 
-                    public static class Pojo {
+                    public static class DataClass {
                         public int uid;
                     }
                 }
@@ -363,11 +363,11 @@ class DatabaseProcessorTest {
     fun detectMissingEntityAnnotationInLibraryClass() {
         val librarySource =
             Source.java(
-                "test.library.MissingEntityAnnotationPojo",
+                "test.library.MissingEntityAnnotationDataClass",
                 """
             package test.library;
             import androidx.room.*;
-            public class MissingEntityAnnotationPojo {
+            public class MissingEntityAnnotationDataClass {
                 @PrimaryKey
                 private long id;
 
@@ -380,7 +380,7 @@ class DatabaseProcessorTest {
         val libraryClasspath = compileFiles(sources = listOf(librarySource))
         singleDb(
             """
-                @Database(entities = {test.library.MissingEntityAnnotationPojo.class}, version = 1)
+                @Database(entities = {test.library.MissingEntityAnnotationDataClass.class}, version = 1)
                 public abstract class MyDb extends RoomDatabase {}
                 """,
             classpath = libraryClasspath
@@ -389,7 +389,7 @@ class DatabaseProcessorTest {
                 compilationDidFail()
                 hasRawOutputContaining(
                     ProcessorErrors.ENTITY_MUST_BE_ANNOTATED_WITH_ENTITY +
-                        " - test.library.MissingEntityAnnotationPojo"
+                        " - test.library.MissingEntityAnnotationDataClass"
                 )
             }
         }
@@ -937,7 +937,7 @@ class DatabaseProcessorTest {
             val adapterEntity = (adapter as EntityRowAdapter).entity
             assertThat(
                 adapterEntity,
-                sameInstance(insertionMethod?.entities?.values?.first()?.pojo)
+                sameInstance(insertionMethod?.entities?.values?.first()?.dataClass)
             )
 
             val withConverter =
@@ -950,7 +950,7 @@ class DatabaseProcessorTest {
             val convAdapterEntity = (convAdapter as EntityRowAdapter).entity
             assertThat(
                 convAdapterEntity,
-                not(sameInstance(insertionMethod?.entities?.values?.first()?.pojo))
+                not(sameInstance(insertionMethod?.entities?.values?.first()?.dataClass))
             )
 
             assertThat(convAdapterEntity, notNullValue())
@@ -959,7 +959,7 @@ class DatabaseProcessorTest {
     }
 
     @Test
-    fun cache_pojo() {
+    fun cache_dataClass() {
         singleDb(
             """
                 @Database(entities = {User.class}, version = 42)
@@ -973,34 +973,34 @@ class DatabaseProcessorTest {
             val userDao = db.daoMethods.first().dao
             val loadOne =
                 userDao.queryMethods.filterIsInstance<ReadQueryMethod>().find {
-                    it.element.jvmName == "loadOnePojo"
+                    it.element.jvmName == "loadOneDataClass"
                 }
             assertThat(loadOne, notNullValue())
             val adapter = loadOne?.queryResultBinder?.adapter?.rowAdapters?.single()
-            assertThat("test sanity", adapter, instanceOf(PojoRowAdapter::class.java))
-            val adapterPojo = (adapter as PojoRowAdapter).pojo
+            assertThat("test sanity", adapter, instanceOf(DataClassRowAdapter::class.java))
+            val adapterDataClass = (adapter as DataClassRowAdapter).dataClass
 
             val loadAll =
                 userDao.queryMethods.filterIsInstance<ReadQueryMethod>().find {
-                    it.element.jvmName == "loadAllPojos"
+                    it.element.jvmName == "loadAllDataClasses"
                 }
             assertThat(loadAll, notNullValue())
             val loadAllAdapter = loadAll?.queryResultBinder?.adapter?.rowAdapters?.single()
-            assertThat("test sanity", loadAllAdapter, instanceOf(PojoRowAdapter::class.java))
-            val loadAllPojo = (loadAllAdapter as PojoRowAdapter).pojo
+            assertThat("test sanity", loadAllAdapter, instanceOf(DataClassRowAdapter::class.java))
+            val loadAllDataClass = (loadAllAdapter as DataClassRowAdapter).dataClass
             assertThat(adapter, not(sameInstance(loadAllAdapter)))
-            assertThat(adapterPojo, sameInstance(loadAllPojo))
+            assertThat(adapterDataClass, sameInstance(loadAllDataClass))
 
             val withConverter =
                 userDao.queryMethods.filterIsInstance<ReadQueryMethod>().find {
-                    it.element.jvmName == "loadPojoWithConverter"
+                    it.element.jvmName == "loadDataClassWithConverter"
                 }
             assertThat(withConverter, notNullValue())
             val convAdapter = withConverter?.queryResultBinder?.adapter?.rowAdapters?.single()
-            assertThat("test sanity", adapter, instanceOf(PojoRowAdapter::class.java))
-            val convAdapterPojo = (convAdapter as PojoRowAdapter).pojo
-            assertThat(convAdapterPojo, notNullValue())
-            assertThat(convAdapterPojo, not(sameInstance(adapterPojo)))
+            assertThat("test sanity", adapter, instanceOf(DataClassRowAdapter::class.java))
+            val convAdapterDataClass = (convAdapter as DataClassRowAdapter).dataClass
+            assertThat(convAdapterDataClass, notNullValue())
+            assertThat(convAdapterDataClass, not(sameInstance(adapterDataClass)))
         }
     }
 

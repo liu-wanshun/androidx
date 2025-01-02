@@ -75,7 +75,7 @@ class DatabaseViewProcessor(
         )
 
         val pojo =
-            PojoProcessor.createFor(
+            DataClassProcessor.createFor(
                     context = context,
                     element = element,
                     bindingScope = FieldProcessor.BindingScope.READ_FROM_STMT,

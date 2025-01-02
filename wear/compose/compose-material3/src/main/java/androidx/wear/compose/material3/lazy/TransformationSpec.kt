@@ -135,6 +135,13 @@ internal data class TransformVariableSpec(
     val topValue: Float,
 
     /**
+     * The value this variable will have when the item is not in either transformation zone, and is
+     * in the "center" of the screen, i.e. the top edge is above the bottom transformation zone, and
+     * the bottom edge is below the top transformation zone.
+     */
+    val targetValue: Float = 1f,
+
+    /**
      * The value this variable will have when the item's top edge is below the bottom transformation
      * zone, usually this happens when it is (or is about to be) partially outside of the screen on
      * the bottom side.
@@ -195,10 +202,21 @@ internal fun rememberResponsiveTransformationSpec(
 
 private fun lerp(start: TransformVariableSpec, stop: TransformVariableSpec, progress: Float) =
     TransformVariableSpec(
-        lerp(start.topValue, stop.topValue, progress),
-        lerp(start.bottomValue, stop.bottomValue, progress),
-        lerp(start.transformationZoneEnterFraction, stop.transformationZoneEnterFraction, progress),
-        lerp(start.transformationZoneExitFraction, stop.transformationZoneExitFraction, progress)
+        topValue = lerp(start.topValue, stop.topValue, progress),
+        targetValue = lerp(start.targetValue, stop.targetValue, progress),
+        bottomValue = lerp(start.bottomValue, stop.bottomValue, progress),
+        transformationZoneEnterFraction =
+            lerp(
+                start.transformationZoneEnterFraction,
+                stop.transformationZoneEnterFraction,
+                progress
+            ),
+        transformationZoneExitFraction =
+            lerp(
+                start.transformationZoneExitFraction,
+                stop.transformationZoneExitFraction,
+                progress
+            ),
     )
 
 private fun lerp(start: TransformationSpec, stop: TransformationSpec, progress: Float) =

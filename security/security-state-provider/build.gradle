@@ -37,6 +37,9 @@ dependencies {
     testImplementation(libs.testExtJunit)
     testImplementation(libs.mockitoKotlin4)
     testImplementation(libs.robolectric)
+
+    androidTestImplementation(libs.testExtJunit)
+    androidTestImplementation(libs.testRules)
 }
 
 android {

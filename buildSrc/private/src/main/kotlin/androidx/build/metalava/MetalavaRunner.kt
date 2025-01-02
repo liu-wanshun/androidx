@@ -242,6 +242,7 @@ sealed class ApiLintMode {
  */
 internal fun generateApi(
     metalavaClasspath: FileCollection,
+    projectXml: File?,
     files: CompilationInputs,
     apiLocation: ApiLocation,
     apiLintMode: ApiLintMode,
@@ -265,6 +266,7 @@ internal fun generateApi(
     generateApiConfigs.forEach { (generateApiMode, apiLintMode) ->
         generateApi(
             metalavaClasspath,
+            projectXml,
             files,
             apiLocation,
             generateApiMode,
@@ -284,6 +286,7 @@ internal fun generateApi(
  */
 private fun generateApi(
     metalavaClasspath: FileCollection,
+    projectXml: File?,
     files: CompilationInputs,
     outputLocation: ApiLocation,
     generateApiMode: GenerateApiMode,
@@ -298,6 +301,7 @@ private fun generateApi(
         getGenerateApiArgs(
             files.bootClasspath,
             files.dependencyClasspath,
+            projectXml,
             files.sourcePaths.files,
             files.commonModuleSourcePaths.files,
             outputLocation,
@@ -316,6 +320,7 @@ private fun generateApi(
 fun getGenerateApiArgs(
     bootClasspath: FileCollection,
     dependencyClasspath: FileCollection,
+    projectXml: File?,
     sourcePaths: Collection<File>,
     commonModuleSourcePaths: Collection<File>,
     outputLocation: ApiLocation?,
@@ -327,11 +332,20 @@ fun getGenerateApiArgs(
     // generate public API txt
     val args =
         mutableListOf(
-            "--classpath",
-            (bootClasspath.files + dependencyClasspath.files).joinToString(File.pathSeparator),
             "--source-path",
             sourcePaths.filter { it.exists() }.joinToString(File.pathSeparator),
         )
+
+    // If there's a project xml file, the classpath isn't needed
+    args +=
+        if (projectXml != null) {
+            listOf("--project", projectXml.path)
+        } else {
+            listOf(
+                "--classpath",
+                (bootClasspath.files + dependencyClasspath.files).joinToString(File.pathSeparator)
+            )
+        }
 
     val existentCommonModuleSourcePaths = commonModuleSourcePaths.filter { it.exists() }
     if (existentCommonModuleSourcePaths.isNotEmpty()) {

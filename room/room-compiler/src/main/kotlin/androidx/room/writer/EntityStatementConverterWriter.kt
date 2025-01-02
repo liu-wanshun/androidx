@@ -68,7 +68,7 @@ class EntityStatementConverterWriter(private val entity: Entity) :
                 }
             FieldReadWriteWriter.readFromStatement(
                 outVar = entityVar,
-                outPojo = entity,
+                outDataClass = entity,
                 stmtVar = stmtParamName,
                 fieldsWithIndices = fieldsWithIndices,
                 relationCollectors = emptyList(), // no relationship for entities

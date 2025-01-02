@@ -17,6 +17,7 @@
 package androidx.compose.material3.adaptive.layout
 
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
+import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveComponentOverrideApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ProvidableCompositionLocal
@@ -49,7 +50,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /** Interface that allows libraries to override the behavior of [ThreePaneScaffold]. */
-@ExperimentalMaterial3AdaptiveApi
+@ExperimentalMaterial3AdaptiveComponentOverrideApi
 interface ThreePaneScaffoldOverride {
     /** Behavior function that is called by the [ThreePaneScaffold] composable. */
     @Composable fun ThreePaneScaffoldOverrideContext.ThreePaneScaffold()
@@ -72,7 +73,8 @@ interface ThreePaneScaffoldOverride {
  *   pane expansion state, `null` by default.
  * @property paneExpansionState the state object of pane expansion state.
  */
-@ExperimentalMaterial3AdaptiveApi
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@ExperimentalMaterial3AdaptiveComponentOverrideApi
 class ThreePaneScaffoldOverrideContext
 internal constructor(
     val modifier: Modifier,
@@ -89,8 +91,8 @@ internal constructor(
 
 /** CompositionLocal containing the currently-selected [ThreePaneScaffoldOverride]. */
 @Suppress("OPT_IN_MARKER_ON_WRONG_TARGET")
-@get:ExperimentalMaterial3AdaptiveApi
-@ExperimentalMaterial3AdaptiveApi
+@get:ExperimentalMaterial3AdaptiveComponentOverrideApi
+@ExperimentalMaterial3AdaptiveComponentOverrideApi
 val LocalThreePaneScaffoldOverride: ProvidableCompositionLocal<ThreePaneScaffoldOverride> =
     compositionLocalOf {
         DefaultThreePaneScaffoldOverride
@@ -119,6 +121,7 @@ val LocalThreePaneScaffoldOverride: ProvidableCompositionLocal<ThreePaneScaffold
  * @param tertiaryPane The content of the tertiary pane that has the lowest priority.
  * @param primaryPane The content of the primary pane that has the highest priority.
  */
+@OptIn(ExperimentalMaterial3AdaptiveComponentOverrideApi::class)
 @ExperimentalMaterial3AdaptiveApi
 @Composable
 internal fun ThreePaneScaffold(
@@ -148,6 +151,7 @@ internal fun ThreePaneScaffold(
     )
 }
 
+@OptIn(ExperimentalMaterial3AdaptiveComponentOverrideApi::class)
 @ExperimentalMaterial3AdaptiveApi
 @Composable
 internal fun ThreePaneScaffold(
@@ -237,7 +241,8 @@ internal fun ThreePaneScaffold(
 }
 
 /** [ThreePaneScaffoldOverride] used when no override is specified. */
-@ExperimentalMaterial3AdaptiveApi
+@OptIn(ExperimentalMaterial3AdaptiveApi::class)
+@ExperimentalMaterial3AdaptiveComponentOverrideApi
 private object DefaultThreePaneScaffoldOverride : ThreePaneScaffoldOverride {
     @Composable
     override fun ThreePaneScaffoldOverrideContext.ThreePaneScaffold() {

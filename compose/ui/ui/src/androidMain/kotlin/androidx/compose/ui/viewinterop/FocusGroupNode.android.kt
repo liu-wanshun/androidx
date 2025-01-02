@@ -22,6 +22,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.FOCUS_DOWN
 import android.view.ViewTreeObserver
+import androidx.compose.ui.ComposeUiFlags
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection.Companion.Exit
@@ -86,7 +88,12 @@ private class FocusGroupPropertiesNode :
 
     val onExit: FocusEnterExitScope.() -> Unit = {
         val embeddedView = getEmbeddedView()
-        if (embeddedView.hasFocus()) {
+        @OptIn(ExperimentalComposeUiApi::class)
+        if (ComposeUiFlags.isViewFocusFixEnabled) {
+            if (embeddedView.hasFocus() || embeddedView.isFocused) {
+                embeddedView.clearFocus()
+            }
+        } else if (embeddedView.hasFocus()) {
             val focusOwner = requireOwner().focusOwner
             val hostView = requireView()
 

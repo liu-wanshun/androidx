@@ -18,6 +18,7 @@ package androidx.camera.core.internal;
 
 import android.graphics.Matrix;
 
+import androidx.camera.core.FlashState;
 import androidx.camera.core.ImageInfo;
 import androidx.camera.core.impl.CameraCaptureResult;
 import androidx.camera.core.impl.TagBundle;
@@ -52,6 +53,12 @@ public final class CameraCaptureResultImageInfo implements ImageInfo {
     @Override
     public @NonNull Matrix getSensorToBufferTransformMatrix() {
         return new Matrix();
+    }
+
+    @FlashState.FlashState
+    @Override
+    public int getFlashState() {
+        return mCameraCaptureResult.getFlashState().toFlashState();
     }
 
     @Override

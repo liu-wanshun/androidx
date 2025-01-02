@@ -49,8 +49,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.takeOrElse
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.foundation.lazy.LocalTransformingLazyColumnItemScope
@@ -850,7 +848,6 @@ private fun CardImpl(
     interactionSource: MutableInteractionSource?,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val hapticFeedback = LocalHapticFeedback.current
     Column(
         modifier =
             modifier
@@ -859,14 +856,7 @@ private fun CardImpl(
                 .combinedClickable(
                     enabled = enabled,
                     onClick = onClick,
-                    onLongClick =
-                        onLongClick?.let {
-                            {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-
-                                it()
-                            }
-                        },
+                    onLongClick = onLongClick, // NB combinedClickable calls LongPress haptic
                     onLongClickLabel = onLongClickLabel,
                     role = null,
                     indication = ripple(),

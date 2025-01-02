@@ -68,7 +68,7 @@ class PositionalDataSourceQueryResultBinder(
                 }
                 .build()
         val rowAdapter = listAdapter?.rowAdapters?.first()
-        if (rowAdapter is PojoRowAdapter && rowAdapter.relationCollectors.isNotEmpty()) {
+        if (rowAdapter is DataClassRowAdapter && rowAdapter.relationCollectors.isNotEmpty()) {
             // @Relation use found, initialize a connection.
             val connectionVar = scope.getTmpVar("_connection")
             scope.builder.applyTo { language ->

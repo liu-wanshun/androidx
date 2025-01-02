@@ -51,7 +51,7 @@ public class MobileApplicationTest {
         builder.setDisplayName("display name");
         builder.setAlternateNames(Arrays.asList("alternate name 1", "alternate name 2"));
         builder.setIconUri(Uri.parse("android.resource://com.example.app/drawable/12345"));
-        builder.setUpdatedTimestamp(1234567890L);
+        builder.setUpdatedTimestampMillis(1234567890L);
         builder.setClassName("com.example.app.MainActivity");
         MobileApplication mobileApplication = builder.build();
 
@@ -63,7 +63,7 @@ public class MobileApplicationTest {
                 .containsExactly("alternate name 1", "alternate name 2");
         assertThat(mobileApplication.getIconUri())
                 .isEqualTo(Uri.parse("android.resource://com.example.app/drawable/12345"));
-        assertThat(mobileApplication.getUpdatedTimestamp()).isEqualTo(1234567890L);
+        assertThat(mobileApplication.getUpdatedTimestampMillis()).isEqualTo(1234567890L);
         assertThat(mobileApplication.getClassName()).isEqualTo("com.example.app.MainActivity");
     }
 
@@ -83,7 +83,7 @@ public class MobileApplicationTest {
                         .setDisplayName(name)
                         .setAlternateNames(alternateNames)
                         .setIconUri(iconUri)
-                        .setUpdatedTimestamp(updatedTimestamp)
+                        .setUpdatedTimestampMillis(updatedTimestamp)
                         .setClassName(className)
                         .build();
 
@@ -92,7 +92,7 @@ public class MobileApplicationTest {
         assertThat(mobileApplication.getAlternateNames()).isEqualTo(alternateNames);
         assertThat(mobileApplication.getIconUri()).isEqualTo(iconUri);
         assertThat(mobileApplication.getSha256Certificate()).isEqualTo(sha256Certificate);
-        assertThat(mobileApplication.getUpdatedTimestamp()).isEqualTo(updatedTimestamp);
+        assertThat(mobileApplication.getUpdatedTimestampMillis()).isEqualTo(updatedTimestamp);
         assertThat(mobileApplication.getClassName()).isEqualTo(className);
     }
 
@@ -103,7 +103,7 @@ public class MobileApplicationTest {
         builder.setDisplayName("display name");
         builder.setAlternateNames(Arrays.asList("alternate name 1", "alternate name 2"));
         builder.setIconUri(Uri.parse("android.resource://com.example.app/drawable/12345"));
-        builder.setUpdatedTimestamp(1234567890L);
+        builder.setUpdatedTimestampMillis(1234567890L);
         builder.setClassName("com.example.app.MainActivity");
         MobileApplication mobileApplication = builder.build();
 
@@ -111,7 +111,7 @@ public class MobileApplicationTest {
                 .setDisplayName("new display name")
                 .setAlternateNames(Arrays.asList("new alternate name 1", "new alternate name 2"))
                 .setIconUri(Uri.parse("android.resource://com.example.app/drawable/98765"))
-                .setUpdatedTimestamp(9876543210L)
+                .setUpdatedTimestampMillis(9876543210L)
                 .setClassName("com.example.app.NewMainActivity");
 
         // assert the original hasn't changed
@@ -119,7 +119,7 @@ public class MobileApplicationTest {
                 .containsExactly("alternate name 1", "alternate name 2");
         assertThat(mobileApplication.getIconUri())
                 .isEqualTo(Uri.parse("android.resource://com.example.app/drawable/12345"));
-        assertThat(mobileApplication.getUpdatedTimestamp()).isEqualTo(1234567890L);
+        assertThat(mobileApplication.getUpdatedTimestampMillis()).isEqualTo(1234567890L);
         assertThat(mobileApplication.getClassName()).isEqualTo("com.example.app.MainActivity");
     }
 
@@ -140,7 +140,7 @@ public class MobileApplicationTest {
                         .setDisplayName(name)
                         .setAlternateNames(alternateNames)
                         .setIconUri(iconUri)
-                        .setUpdatedTimestamp(updatedTimestamp)
+                        .setUpdatedTimestampMillis(updatedTimestamp)
                         .setClassName(className)
                         .build();
 
@@ -217,7 +217,7 @@ public class MobileApplicationTest {
             assertThat(mobileApplication.getDisplayName()).isEqualTo("display name");
             assertThat(mobileApplication.getIconUri().toString())
                     .isEqualTo("android.resource://com.example.app/drawable/12345");
-            assertThat(mobileApplication.getUpdatedTimestamp()).isEqualTo(1234567890L);
+            assertThat(mobileApplication.getUpdatedTimestampMillis()).isEqualTo(1234567890L);
             assertThat(mobileApplication.getClassName())
                     .isEqualTo("com.example.app.MainActivity");
         } finally {

@@ -135,10 +135,12 @@ package androidx.compose.ui {
     property public final boolean NewNestedScrollFlingDispatchingEnabled;
     property public final boolean isRectTrackingEnabled;
     property public final boolean isSemanticAutofillEnabled;
+    property public final boolean isViewFocusFixEnabled;
     field public static final androidx.compose.ui.ComposeUiFlags INSTANCE;
     field public static boolean NewNestedScrollFlingDispatchingEnabled;
     field public static boolean isRectTrackingEnabled;
     field public static boolean isSemanticAutofillEnabled;
+    field public static boolean isViewFocusFixEnabled;
   }
 
   public final class ComposedModifierKt {

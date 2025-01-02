@@ -31,8 +31,7 @@
     <string name="desc_goto_link" msgid="2461368384824849714">"Vai á páxina <xliff:g id="PAGE_NUMBER">%1$d</xliff:g>"</string>
     <string name="desc_page" msgid="5684226167093594168">"páxina <xliff:g id="PAGE">%1$d</xliff:g>"</string>
     <string name="desc_empty_page" msgid="5041794048330057239">"Páxina baleira"</string>
-    <!-- no translation found for desc_page_with_text (2564017005407577604) -->
-    <skip />
+    <string name="desc_page_with_text" msgid="2564017005407577604">"Páxina <xliff:g id="PAGE_NUMBER">%1$d</xliff:g>: <xliff:g id="PAGE_TEXT">%2$s</xliff:g>"</string>
     <string name="error_file_format_pdf" msgid="7567006188638831878">"Non se puido mostrar o PDF (<xliff:g id="TITLE">%1$s</xliff:g> ten un formato non válido)"</string>
     <string name="error_on_page" msgid="1592475819957182385">"Non se puido mostrar a páxina <xliff:g id="PAGE">%1$d</xliff:g> (hai un erro no ficheiro)"</string>
     <string name="desc_web_link_shortened_to_domain" msgid="3323639528531061592">"Ligazón: páxina web en <xliff:g id="DESTINATION_DOMAIN">%1$s</xliff:g>"</string>

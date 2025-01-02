@@ -30,9 +30,9 @@ import java.util.Optional
 
 internal object AppCardDefaults {
     /**
-     * Returns [LayoutElement] describing the inner content for the title card.
+     * Returns [LayoutElement] describing the inner content for the app card.
      *
-     * This is a Column containing the following:
+     * This is a [Column] containing the following:
      * * header slot
      *     * avatar, if present
      *     * spacing if label is present
@@ -84,7 +84,7 @@ internal object AppCardDefaults {
     }
 }
 
-/** Provides style values for the title card component. */
+/** Provides style values for the app card component. */
 public class AppCardStyle
 internal constructor(
     internal val innerPadding: Padding,
@@ -104,6 +104,30 @@ internal constructor(
 
         /** The default smaller spacer width or height that should be between different elements. */
         @Dimension(unit = DP) private const val SMALL_SPACE_DP: Int = 2
+
+        /**
+         * Default style variation for the [appCard] where all opinionated inner content is
+         * displayed in a small size.
+         */
+        public fun smallAppCardStyle(): AppCardStyle =
+            AppCardStyle(
+                innerPadding =
+                    Padding.Builder()
+                        .setTop(4.toDp())
+                        .setBottom(4.toDp())
+                        .setStart(14.toDp())
+                        .setEnd(14.toDp())
+                        .build(),
+                labelToTimeSpaceDp = DEFAULT_SPACE_DP,
+                labelToAvatarSpaceDp = DEFAULT_SPACE_DP,
+                avatarSize = 16,
+                titleToContentSpaceDp = 0,
+                headerToTitleSpaceDp = SMALL_SPACE_DP,
+                titleTypography = Typography.LABEL_SMALL,
+                contentTypography = Typography.BODY_SMALL,
+                timeTypography = Typography.BODY_SMALL,
+                labelTypography = Typography.LABEL_SMALL,
+            )
 
         /**
          * Default style variation for the [appCard] where all opinionated inner content is

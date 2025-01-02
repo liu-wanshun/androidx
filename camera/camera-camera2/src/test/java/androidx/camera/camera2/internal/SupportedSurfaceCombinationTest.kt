@@ -1655,12 +1655,13 @@ class SupportedSurfaceCombinationTest {
 
             if (compareExpectedFps != null) {
                 assertThat(
-                    suggestedStreamSpecsForNewUseCases[useCaseConfigMap[it]]!!
-                        .expectedFrameRateRange == compareExpectedFps
-                )
+                        suggestedStreamSpecsForNewUseCases[useCaseConfigMap[it]]!!
+                            .expectedFrameRateRange
+                    )
+                    .isEqualTo(compareExpectedFps)
             }
             val zslDisabled = suggestedStreamSpecsForNewUseCases[useCaseConfigMap[it]]!!.zslDisabled
-            assertThat(zslDisabled == hasVideoCapture)
+            assertThat(zslDisabled).isEqualTo(hasVideoCapture)
         }
 
         useCasesExpectedDynamicRangeMap.keys.forEach {
@@ -2733,16 +2734,16 @@ class SupportedSurfaceCombinationTest {
     @Test
     fun getSuggestedStreamSpec_has_exact_device_supported_expectedFrameRateRange() {
         // use case with target fps
-        val useCase1 = createUseCase(CaptureType.PREVIEW, targetFrameRate = Range<Int>(30, 40))
+        val useCase1 = createUseCase(CaptureType.PREVIEW, targetFrameRate = Range<Int>(30, 30))
         val useCaseExpectedResultMap =
             mutableMapOf<UseCase, Size>().apply { put(useCase1, Size(1920, 1440)) }
         getSuggestedSpecsAndVerify(
             useCaseExpectedResultMap,
             hardwareLevel = CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL,
             compareWithAtMost = true,
-            compareExpectedFps = Range(30, 40)
+            compareExpectedFps = Range(30, 30)
         )
-        // expected fps 30,40 because it is an exact intersection
+        // expected fps 30,30 because it is an exact intersection
     }
 
     @Test

@@ -45,6 +45,7 @@ internal class PageManager(
      * threshold for tiled rendering
      */
     private val maxBitmapSizePx: Point,
+    private val isTouchExplorationEnabled: Boolean
 ) {
     /**
      * Replay at least 1 value in case of an invalidation signal issued while [PdfView] is not
@@ -79,10 +80,14 @@ internal class PageManager(
     /**
      * Updates the internal state of [Page]s owned by this manager in response to a viewport change
      */
-    fun maybeUpdateBitmaps(visiblePages: Range<Int>, currentZoomLevel: Float) {
+    fun maybeUpdatePageState(
+        visiblePages: Range<Int>,
+        currentZoomLevel: Float,
+        isFlinging: Boolean
+    ) {
         // Start preparing UI for visible pages
         for (i in visiblePages.lower..visiblePages.upper) {
-            pages[i]?.setVisible(currentZoomLevel)
+            pages[i]?.updateState(currentZoomLevel, isFlinging)
         }
 
         // Hide pages that are well outside the viewport. We deliberately don't set pages that
@@ -104,7 +109,13 @@ internal class PageManager(
      * Updates the set of [Page]s owned by this manager when a new Page's dimensions are loaded.
      * Dimensions are the minimum data required to instantiate a page.
      */
-    fun onPageSizeReceived(pageNum: Int, size: Point, isVisible: Boolean, currentZoomLevel: Float) {
+    fun onPageSizeReceived(
+        pageNum: Int,
+        size: Point,
+        isVisible: Boolean,
+        currentZoomLevel: Float,
+        isFlinging: Boolean
+    ) {
         if (pages.contains(pageNum)) return
         val page =
             Page(
@@ -113,10 +124,11 @@ internal class PageManager(
                     pdfDocument,
                     backgroundScope,
                     maxBitmapSizePx,
+                    isTouchExplorationEnabled,
                     onPageUpdate = { _invalidationSignalFlow.tryEmit(Unit) },
                     onPageTextReady = { pageNumber -> _pageTextReadyFlow.tryEmit(pageNumber) }
                 )
-                .apply { if (isVisible) setVisible(currentZoomLevel) }
+                .apply { if (isVisible) updateState(currentZoomLevel, isFlinging) }
         pages.put(pageNum, page)
     }
 

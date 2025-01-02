@@ -45,7 +45,8 @@ public class JpegImage2Result implements Operation<Packet<ImageProxy>, ImageProx
                 image.getImageInfo().getTagBundle(),
                 image.getImageInfo().getTimestamp(),
                 input.getRotationDegrees(),
-                input.getSensorToBufferTransform());
+                input.getSensorToBufferTransform(),
+                image.getImageInfo().getFlashState());
 
         final ImageProxy imageWithUpdatedInfo = new SettableImageProxy(image,
                 input.getSize(), imageInfo);

@@ -17,7 +17,6 @@
 package androidx.build.metalava
 
 import androidx.build.Version
-import androidx.build.checkapi.ApiBaselinesLocation
 import androidx.build.checkapi.ApiLocation
 import androidx.build.checkapi.StandardCompilationInputs
 import java.io.File
@@ -26,10 +25,8 @@ import org.gradle.api.file.Directory
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Internal
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
@@ -41,20 +38,8 @@ import org.gradle.workers.WorkerExecutor
  * file from the previous API signature files.
  */
 @CacheableTask
-abstract class GenerateApiTask @Inject constructor(workerExecutor: WorkerExecutor) :
-    MetalavaTask(workerExecutor) {
-    @get:Internal // already expressed by getApiLintBaseline()
-    abstract val baselines: Property<ApiBaselinesLocation>
-
-    @Optional
-    @PathSensitive(PathSensitivity.NONE)
-    @InputFile
-    fun getApiLintBaseline(): File? {
-        val baseline = baselines.get().apiLintFile
-        return if (baseline.exists()) baseline else null
-    }
-
-    @get:Input var targetsJavaConsumers: Boolean = true
+internal abstract class GenerateApiTask @Inject constructor(workerExecutor: WorkerExecutor) :
+    SourceMetalavaTask(workerExecutor) {
 
     @get:Input var generateRestrictToLibraryGroupAPIs = true
 
@@ -111,9 +96,10 @@ abstract class GenerateApiTask @Inject constructor(workerExecutor: WorkerExecuto
 
         generateApi(
             metalavaClasspath,
+            createProjectXmlFile(),
             inputs,
             apiLocation.get(),
-            ApiLintMode.CheckBaseline(baselines.get().apiLintFile, targetsJavaConsumers),
+            ApiLintMode.CheckBaseline(baselines.get().apiLintFile, targetsJavaConsumers.get()),
             generateRestrictToLibraryGroupAPIs,
             levelsArgs,
             k2UastEnabled.get(),

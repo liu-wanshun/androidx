@@ -18,6 +18,7 @@ package androidx.appsearch.platformstorage;
 
 import static androidx.appsearch.app.AppSearchResult.RESULT_NOT_FOUND;
 
+import android.content.Context;
 import android.os.Build;
 
 import androidx.annotation.RequiresApi;
@@ -56,15 +57,17 @@ import java.util.concurrent.Executor;
 class EnterpriseGlobalSearchSessionImpl implements EnterpriseGlobalSearchSession {
     private final android.app.appsearch.EnterpriseGlobalSearchSession mPlatformSession;
     private final Executor mExecutor;
+    private final Context mContext;
     private final Features mFeatures;
 
     EnterpriseGlobalSearchSessionImpl(
             android.app.appsearch.@NonNull EnterpriseGlobalSearchSession platformSession,
             @NonNull Executor executor,
-            @NonNull Features features) {
+            @NonNull Context context) {
         mPlatformSession = Preconditions.checkNotNull(platformSession);
         mExecutor = Preconditions.checkNotNull(executor);
-        mFeatures = Preconditions.checkNotNull(features);
+        mContext = Preconditions.checkNotNull(context);
+        mFeatures = new FeaturesImpl(mContext);
     }
 
     @Override
@@ -111,8 +114,8 @@ class EnterpriseGlobalSearchSessionImpl implements EnterpriseGlobalSearchSession
         android.app.appsearch.SearchResults platformSearchResults =
                 mPlatformSession.search(
                         queryExpression,
-                        SearchSpecToPlatformConverter.toPlatformSearchSpec(searchSpec));
-        return new SearchResultsImpl(platformSearchResults, searchSpec, mExecutor);
+                        SearchSpecToPlatformConverter.toPlatformSearchSpec(mContext, searchSpec));
+        return new SearchResultsImpl(platformSearchResults, searchSpec, mExecutor, mContext);
     }
 
     @Override

@@ -83,7 +83,6 @@ androidXMultiplatform {
                 implementation(project(":compose:material:material"))
                 implementation("androidx.compose.material:material-icons-core:1.6.7")
                 implementation(project(":compose:ui:ui-test-junit4"))
-                implementation(project(":compose:ui:ui-test-manifest"))
                 implementation(project(":compose:test-utils"))
             }
         }

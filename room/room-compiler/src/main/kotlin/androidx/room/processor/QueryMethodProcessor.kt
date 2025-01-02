@@ -28,7 +28,7 @@ import androidx.room.parser.QueryType
 import androidx.room.parser.SqlParser
 import androidx.room.processor.ProcessorErrors.cannotMapSpecifiedColumn
 import androidx.room.solver.TypeAdapterExtras
-import androidx.room.solver.query.result.PojoRowAdapter
+import androidx.room.solver.query.result.DataClassRowAdapter
 import androidx.room.verifier.ColumnInfo
 import androidx.room.verifier.DatabaseVerificationErrors
 import androidx.room.verifier.DatabaseVerifier
@@ -255,7 +255,7 @@ private class InternalQueryProcessor(
             // put a warning if it is has relations and not annotated w/ transaction
             val hasRelations =
                 resultBinder.adapter?.rowAdapters?.any { adapter ->
-                    adapter is PojoRowAdapter && adapter.relationCollectors.isNotEmpty()
+                    adapter is DataClassRowAdapter && adapter.relationCollectors.isNotEmpty()
                 } == true
             if (hasRelations) {
                 context.logger.w(
@@ -270,27 +270,32 @@ private class InternalQueryProcessor(
             val mappings = resultBinder.adapter?.mappings ?: return@let
             // If there are no mapping (e.g. might be a primitive return type result), then we
             // can't reasonable determine cursor mismatch.
-            if (mappings.isEmpty() || mappings.none { it is PojoRowAdapter.PojoMapping }) {
+            if (
+                mappings.isEmpty() || mappings.none { it is DataClassRowAdapter.DataClassMapping }
+            ) {
                 return@let
             }
             val usedColumns = mappings.flatMap { it.usedColumns }
             val columnNames = queryResultInfo.columns.map { it.name }
             val unusedColumns = columnNames - usedColumns
-            val pojoMappings = mappings.filterIsInstance<PojoRowAdapter.PojoMapping>()
+            val dataClassMappings =
+                mappings.filterIsInstance<DataClassRowAdapter.DataClassMapping>()
             val pojoUnusedFields =
-                pojoMappings
+                dataClassMappings
                     .filter { it.unusedFields.isNotEmpty() }
                     .associate {
-                        it.pojo.typeName.toString(context.codeLanguage) to it.unusedFields
+                        it.dataClass.typeName.toString(context.codeLanguage) to it.unusedFields
                     }
             if (unusedColumns.isNotEmpty() || pojoUnusedFields.isNotEmpty()) {
                 val warningMsg =
-                    ProcessorErrors.queryFieldPojoMismatch(
-                        pojoTypeNames =
-                            pojoMappings.map { it.pojo.typeName.toString(context.codeLanguage) },
+                    ProcessorErrors.queryFieldDataClassMismatch(
+                        dataClassTypeNames =
+                            dataClassMappings.map {
+                                it.dataClass.typeName.toString(context.codeLanguage)
+                            },
                         unusedColumns = unusedColumns,
                         allColumns = columnNames,
-                        pojoUnusedFields = pojoUnusedFields,
+                        dataClassUnusedFields = pojoUnusedFields,
                     )
                 context.logger.w(Warning.QUERY_MISMATCH, executableElement, warningMsg)
             }

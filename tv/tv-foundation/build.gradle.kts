@@ -21,6 +21,8 @@
  * Please use that script when creating a new project, rather than copying an existing project and
  * modifying its settings.
  */
+
+import androidx.build.KotlinTarget
 import androidx.build.LibraryType
 
 plugins {
@@ -32,24 +34,20 @@ plugins {
 
 dependencies {
     api(libs.kotlinStdlib)
-    api("androidx.annotation:annotation:1.8.1")
+    api("androidx.annotation:annotation:1.9.1")
 
-    val composeVersion = "1.6.8"
-    api("androidx.compose.animation:animation:$composeVersion")
+    val composeVersion = "1.7.6"
     api("androidx.compose.foundation:foundation:$composeVersion")
-    api("androidx.compose.foundation:foundation-layout:$composeVersion")
     api("androidx.compose.runtime:runtime:$composeVersion")
-    api("androidx.compose.ui:ui-util:$composeVersion")
     api("androidx.compose.ui:ui:$composeVersion")
-    api("androidx.compose.ui:ui-graphics:$composeVersion")
     api("androidx.compose.ui:ui-text:$composeVersion")
 
-    implementation("androidx.profileinstaller:profileinstaller:1.4.0")
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 
     androidTestImplementation(libs.truth)
-    androidTestImplementation(project(":compose:runtime:runtime"))
-    androidTestImplementation(project(":compose:ui:ui-test"))
-    androidTestImplementation(project(":compose:ui:ui-test-junit4"))
+    androidTestImplementation("androidx.compose.runtime:runtime:$composeVersion")
+    androidTestImplementation("androidx.compose.ui:ui-test:$composeVersion")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4:$composeVersion")
     androidTestImplementation(project(":compose:test-utils"))
     androidTestImplementation(libs.testRunner)
 }
@@ -63,6 +61,7 @@ androidx {
     name = "TV Foundation"
     type = LibraryType.PUBLISHED_LIBRARY_ONLY_USED_BY_KOTLIN_CONSUMERS
     mavenVersion = LibraryVersions["TV"]
+    kotlinTarget = KotlinTarget.KOTLIN_1_9
     inceptionYear = "2022"
     description = "This library makes it easier for developers" +
             "to write Jetpack Compose applications for TV devices by providing " +

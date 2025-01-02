@@ -189,4 +189,10 @@ public interface VendorExtender {
         // onCaptureCompleted is invoked when available captureResult keys are not empty.
         return !getSupportedCaptureResultKeys().isEmpty();
     }
+
+    default @NonNull List<Pair<CameraCharacteristics.Key, Object>>
+            getAvailableCharacteristicsKeyValues() {
+        return Collections.emptyList();
+    }
+
 }

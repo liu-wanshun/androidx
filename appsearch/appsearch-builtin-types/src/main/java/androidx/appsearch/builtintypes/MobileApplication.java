@@ -57,8 +57,10 @@ public class MobileApplication extends Thing {
 
     @Document.BytesProperty private final byte[] mSha256Certificate;
 
-    @Document.LongProperty(indexingType = LongPropertyConfig.INDEXING_TYPE_RANGE)
-    private final long mUpdatedTimestamp;
+    // Property name set to update to match framework
+    @Document.LongProperty(name = "updatedTimestamp",
+            indexingType = LongPropertyConfig.INDEXING_TYPE_RANGE)
+    private final long mUpdatedTimestampMillis;
 
     @Document.StringProperty private final String mClassName;
 
@@ -79,7 +81,7 @@ public class MobileApplication extends Thing {
             @Nullable String displayName,
             @Nullable Uri iconUri,
             byte @NonNull [] sha256Certificate,
-            long updatedTimestamp,
+            long updatedTimestampMillis,
             @Nullable String className) {
         super(namespace, id, documentScore, creationTimestampMillis, documentTtlMillis, name,
                 alternateNames, description, image, url, potentialActions);
@@ -88,7 +90,7 @@ public class MobileApplication extends Thing {
         mAlternateNames = Preconditions.checkNotNull(alternateNames);
         mIconUri = iconUri;
         mSha256Certificate = Preconditions.checkNotNull(sha256Certificate);
-        mUpdatedTimestamp = updatedTimestamp;
+        mUpdatedTimestampMillis = updatedTimestampMillis;
         mClassName = className;
     }
 
@@ -133,8 +135,8 @@ public class MobileApplication extends Thing {
 
     /** Returns the last time the app was installed or updated on the device. */
     @CurrentTimeMillisLong
-    public long getUpdatedTimestamp() {
-        return mUpdatedTimestamp;
+    public long getUpdatedTimestampMillis() {
+        return mUpdatedTimestampMillis;
     }
 
     /**
@@ -185,7 +187,7 @@ public class MobileApplication extends Thing {
         private String mDisplayName;
         private Uri mIconUri;
         private final byte[] mSha256Certificate;
-        private long mUpdatedTimestamp;
+        private long mUpdatedTimestampMillis;
         private String mClassName;
         private boolean mBuilt = false;
 
@@ -203,7 +205,7 @@ public class MobileApplication extends Thing {
             mDisplayName = mobileApplication.mDisplayName;
             mIconUri = mobileApplication.mIconUri;
             mSha256Certificate = mobileApplication.mSha256Certificate;
-            mUpdatedTimestamp = mobileApplication.mUpdatedTimestamp;
+            mUpdatedTimestampMillis = mobileApplication.mUpdatedTimestampMillis;
             mClassName = mobileApplication.mClassName;
         }
 
@@ -222,9 +224,10 @@ public class MobileApplication extends Thing {
         }
 
         /** Sets the last time the app was installed or updated on the device. */
-        public @NonNull T setUpdatedTimestamp(@CurrentTimeMillisLong long updatedTimestamp) {
+        public @NonNull T setUpdatedTimestampMillis(
+                @CurrentTimeMillisLong long updatedTimestampMillis) {
             resetIfBuilt();
-            mUpdatedTimestamp = updatedTimestamp;
+            mUpdatedTimestampMillis = updatedTimestampMillis;
             return (T) this;
         }
 
@@ -265,7 +268,7 @@ public class MobileApplication extends Thing {
                     mDisplayName,
                     mIconUri,
                     mSha256Certificate,
-                    mUpdatedTimestamp,
+                    mUpdatedTimestampMillis,
                     mClassName);
         }
     }

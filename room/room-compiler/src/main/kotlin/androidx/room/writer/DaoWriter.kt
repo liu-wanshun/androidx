@@ -91,7 +91,7 @@ class DaoWriter(
                 return typeName.simpleNames.last()
             }
             return if (shortcutEntity.isPartialEntity) {
-                typeNameToFieldName(shortcutEntity.pojo.className) +
+                typeNameToFieldName(shortcutEntity.dataClass.className) +
                     "As" +
                     typeNameToFieldName(shortcutEntity.entityClassName)
             } else {
@@ -701,10 +701,10 @@ class DaoWriter(
     ) :
         SharedPropertySpec(
             baseName = "insertAdapterOf${shortcutEntityFieldNamePart(shortcutEntity)}",
-            type = INSERT_ADAPTER.parametrizedBy(shortcutEntity.pojo.typeName)
+            type = INSERT_ADAPTER.parametrizedBy(shortcutEntity.dataClass.typeName)
         ) {
         override fun getUniqueKey(): String {
-            return "${shortcutEntity.pojo.typeName}-${shortcutEntity.entityTypeName}" +
+            return "${shortcutEntity.dataClass.typeName}-${shortcutEntity.entityTypeName}" +
                 onConflictText
         }
 
@@ -718,12 +718,12 @@ class DaoWriter(
     ) :
         SharedPropertySpec(
             baseName = "${methodPrefix}AdapterOf${shortcutEntityFieldNamePart(shortcutEntity)}",
-            type = DELETE_OR_UPDATE_ADAPTER.parametrizedBy(shortcutEntity.pojo.typeName)
+            type = DELETE_OR_UPDATE_ADAPTER.parametrizedBy(shortcutEntity.dataClass.typeName)
         ) {
         override fun prepare(writer: TypeWriter, builder: XPropertySpec.Builder) {}
 
         override fun getUniqueKey(): String {
-            return "${shortcutEntity.pojo.typeName}-${shortcutEntity.entityTypeName}" +
+            return "${shortcutEntity.dataClass.typeName}-${shortcutEntity.entityTypeName}" +
                 "$methodPrefix$onConflictText"
         }
     }
@@ -731,10 +731,10 @@ class DaoWriter(
     class UpsertAdapterProperty(val shortcutEntity: ShortcutEntity) :
         SharedPropertySpec(
             baseName = "upsertAdapterOf${shortcutEntityFieldNamePart(shortcutEntity)}",
-            type = UPSERT_ADAPTER.parametrizedBy(shortcutEntity.pojo.typeName)
+            type = UPSERT_ADAPTER.parametrizedBy(shortcutEntity.dataClass.typeName)
         ) {
         override fun getUniqueKey(): String {
-            return "${shortcutEntity.pojo.typeName}-${shortcutEntity.entityTypeName}"
+            return "${shortcutEntity.dataClass.typeName}-${shortcutEntity.entityTypeName}"
         }
 
         override fun prepare(writer: TypeWriter, builder: XPropertySpec.Builder) {}

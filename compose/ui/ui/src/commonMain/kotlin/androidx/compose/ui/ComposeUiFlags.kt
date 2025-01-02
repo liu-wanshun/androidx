@@ -80,4 +80,10 @@ object ComposeUiFlags {
      * the new Autofill APIs and features introduced.
      */
     @Suppress("MutableBareField") @JvmField var isSemanticAutofillEnabled: Boolean = false
+
+    /**
+     * This enables fixes for View focus. The changes are large enough to require a flag to allow
+     * disabling them.
+     */
+    @Suppress("MutableBareField") @JvmField var isViewFocusFixEnabled: Boolean = true
 }

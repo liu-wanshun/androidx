@@ -23,7 +23,6 @@ import androidx.wear.protolayout.ActionBuilders.LaunchAction
 import androidx.wear.protolayout.DeviceParametersBuilders
 import androidx.wear.protolayout.LayoutElementBuilders.Image
 import androidx.wear.protolayout.ModifiersBuilders.Clickable
-import androidx.wear.protolayout.TypeBuilders.StringProp
 import androidx.wear.protolayout.expression.AppDataKey
 import androidx.wear.protolayout.expression.DynamicBuilders.DynamicInt32
 import androidx.wear.protolayout.material3.EdgeButtonDefaults.BOTTOM_MARGIN_DP
@@ -39,6 +38,9 @@ import androidx.wear.protolayout.testing.hasImage
 import androidx.wear.protolayout.testing.hasText
 import androidx.wear.protolayout.testing.hasWidth
 import androidx.wear.protolayout.testing.isClickable
+import androidx.wear.protolayout.types.LayoutString
+import androidx.wear.protolayout.types.asLayoutConstraint
+import androidx.wear.protolayout.types.layoutString
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.internal.DoNotInstrument
@@ -123,7 +125,7 @@ class EdgeButtonTest {
                     onClick = CLICKABLE,
                     modifier = LayoutModifier.contentDescription(CONTENT_DESCRIPTION)
                 ) {
-                    text(label.prop())
+                    text(label.layoutString)
                 }
             }
 
@@ -137,9 +139,11 @@ class EdgeButtonTest {
         val label = "test text"
         val stateKey = AppDataKey<DynamicInt32>("testKey")
         val dynamicLabel =
-            StringProp.Builder(label)
-                .setDynamicValue(DynamicInt32.from(stateKey).times(2).format())
-                .build()
+            LayoutString(
+                label,
+                DynamicInt32.from(stateKey).times(2).format(),
+                label.asLayoutConstraint()
+            )
 
         val queryProvider =
             LayoutElementAssertionsProvider(
@@ -148,7 +152,7 @@ class EdgeButtonTest {
                         onClick = CLICKABLE,
                         modifier = LayoutModifier.contentDescription(CONTENT_DESCRIPTION)
                     ) {
-                        text(dynamicLabel)
+                        this.text(dynamicLabel)
                     }
                 }
             )
