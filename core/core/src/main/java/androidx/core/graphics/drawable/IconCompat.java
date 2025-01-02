@@ -1272,6 +1272,11 @@ public class IconCompat extends CustomVersionedParcelable {
                         icon = Icon.createWithBitmap(createLegacyIconFromAdaptiveIcon(
                                 BitmapFactory.decodeStream(is), false));
                     }
+                    try {
+                        is.close();
+                    } catch (IOException e) {
+                        /* ignore */
+                    }
                     break;
                 default:
                     throw new IllegalArgumentException("Unknown type");
